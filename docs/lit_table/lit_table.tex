@@ -1,0 +1,196 @@
+\documentclass[10pt]{article}
+\usepackage[a3paper, landscape, margin=1.2cm]{geometry}
+\usepackage{longtable}
+\usepackage{array}
+\usepackage{booktabs}
+\usepackage{xcolor}
+\usepackage{titlesec}
+\usepackage[hidelinks]{hyperref}
+
+\titleformat{\section}{\normalfont\Large\bfseries}{}{0pt}{}
+\renewcommand{\arraystretch}{1.25}
+\setlength{\tabcolsep}{4pt}
+\pagestyle{plain}
+
+\newcolumntype{L}[1]{>{\raggedright\arraybackslash}p{#1}}
+
+\begin{document}
+
+\begin{center}
+{\LARGE \textbf{Literature Review: Base Papers on Phishing URL Detection}}\\[4pt]
+{\large Extracted directly from each paper's dataset, methodology, results, and limitations sections}
+\end{center}
+\vspace{6pt}
+
+\footnotesize
+\begin{longtable}{L{2.6cm} L{2.6cm} L{1.8cm} L{2.7cm} L{2.7cm} L{4.4cm} L{3.4cm} L{2.6cm} L{3.0cm}}
+\toprule
+\textbf{Paper} & \textbf{Dataset Used} & \textbf{Size} & \textbf{Phishing URLs} & \textbf{Legitimate URLs} & \textbf{Features Used} & \textbf{Algorithm} & \textbf{Evaluation Metrics} & \textbf{Accuracy} \\
+\midrule
+\endfirsthead
+\toprule
+\textbf{Paper} & \textbf{Dataset Used} & \textbf{Size} & \textbf{Phishing URLs} & \textbf{Legitimate URLs} & \textbf{Features Used} & \textbf{Algorithm} & \textbf{Evaluation Metrics} & \textbf{Accuracy} \\
+\midrule
+\endhead
+\bottomrule
+\endfoot
+\bottomrule
+\endlastfoot
+
+ResMLP (Remya et al., IEEE Access 2024)
+ & Kaggle dataset (via PhishHaven ref.), filtered to benign+phishing
+ & 522{,}214 (filtered; 651{,}191 raw)
+ & 94{,}111
+ & 428{,}103
+ & 25 URL-derived lexical features; WHOIS domain age; Google-index status; GLOVE+NLTK sentiment score
+ & ResMLP: conv block + 7 inverted-residual blocks + dense/softmax
+ & Accuracy, Precision, Recall, F1, ROC-AUC
+ & \textbf{98.29\%} \\
+
+Feature Extension (He et al., IEEE IoT J. 2024)
+ & PhishTank (phishing) + Kaggle ``Phishing site URLs'' (legit), balanced
+ & 73{,}576
+ & 36{,}788
+ & 36{,}788
+ & TextRank feature-extension library (top-10 keywords) + BERT WordPiece embedding (vector length 138)
+ & Custom BERT (6 layers, H=256) $\rightarrow$ 1D-CNN classifier
+ & Accuracy, Precision, Recall, F1, FPR, AUC
+ & \textbf{99.75\%} \\
+
+Multimodal XAI (Vulfin et al., MAKE 2026)
+ & Proprietary D1 + public MTLP (D2)
+ & D1 $\approx$3.2M (cleaned); D2 = 15{,}000
+ & D1: 1.6M; D2: $\approx$50\% (not printed)
+ & D1: 1.6M; D2: $\approx$50\% (not printed)
+ & URL+metadata ($>$89 feats incl. WHOIS/SSL); char-level URL (CNN1D); HTML (CodeBERT); screenshot (EfficientNet-B7)
+ & Late-fusion ensemble: CatBoost + CNN1D + CodeBERT + EfficientNet-B7 + meta-classifier
+ & Accuracy, Precision, Recall, F1, ROC-AUC, FPR, FNR
+ & F1 \textbf{0.989} (D1) / \textbf{0.953} (D2) \\
+
+Evaluating Feature Engineering (Kustiawan \& Ghauth, IEEE Access 2025)
+ & PhishOFE dataset
+ & 101{,}063
+ & 48.97\% ($\approx$49{,}491)
+ & 51.03\% ($\approx$51{,}572)
+ & URL (11 feats) + HTML (19 feats) + Derived (4 feats), tested in 4 combinations
+ & 10 ML models compared (RF, DT, kNN, GBM, LR, LightGBM, SVM, CatBoost, NB, XGBoost); best = CatBoost
+ & Accuracy, Precision, Recall, F1
+ & \textbf{99.45\%} (CatBoost, URL+HTML+derived) \\
+
+PhishOFE (Kustiawan \& Ghauth, IEEE Access 2025)
+ & PhishOFE dataset (own; PhishTank+OpenPhish phishing, Open PageRank legit)
+ & 101{,}063
+ & 48.97\% ($\approx$49{,}491)
+ & 51.03\% ($\approx$51{,}572)
+ & URL + HTML + derived features; deliberately \textbf{no} third-party/WHOIS features
+ & 10 ML models compared; best = CatBoost
+ & Accuracy, Precision, Recall, F1, MCC, train/predict time
+ & \textbf{99.48\%} (CatBoost) \\
+
+Layered Model (Goenka et al., IEEE Access 2025)
+ & Own DS1 (PhishTank+Kaggle) + 6 comparison sets (DS1\_5k/10k/25k, DS2, DS3, DS4)
+ & DS1 = 38{,}661
+ & 19{,}432
+ & 19{,}229
+ & Layer 1: 5 brand-jacking features (fuzzy match); Layer 2: 19 lexical features
+ & Layer 1: rule-based fuzzy matching; Layer 2: XGBoost (best of 5 ML models)
+ & Accuracy, Precision, Recall, F1, response time (ms)
+ & \textbf{99.35\%} (12.49 ms); \textbf{89.17\%} on older DS2 (73{,}576 URLs) \\
+
+X-PHIDE (Misiek \& Hyla, IEEE Access 2026)
+ & Custom (4 sources) + GramBeddings + PhiUSIIL
+ & Custom 75{,}738; GramBeddings 639{,}723 train / 159{,}940 test; PhiUSIIL 235{,}795 (47{,}103 used)
+ & PhiUSIIL: 100{,}945; Custom/GramBeddings: $\approx$50\% (rate only)
+ & PhiUSIIL: 134{,}850; Custom/GramBeddings: $\approx$50\% (rate only)
+ & $>$90 raw features reduced to 8 selected (length\_url, qty\_hyphen\_path, has\_brand\_keyword, subdomain\_auth\_count, qty\_nameservers, qty\_dot\_url, is\_spf\_domain, time\_domain\_activation)
+ & XGBoost (Bayesian-tuned)
+ & Accuracy, Precision, Recall, Specificity, F1, ROC-AUC, train/inference time, memory
+ & \textbf{90.72\%} in-distribution; \textbf{77.84\%} avg.\ cross-dataset \\
+
+Staying Ahead of Phishers (Kavya \& Sumathi, AI Review 2025) --- \textit{survey}
+ & N/A --- literature review; cites PhishTank, PhiKitA, UCI repo, Ethereum data across $\sim$50 surveyed studies
+ & N/A
+ & N/A
+ & N/A
+ & Surveys list-based, ML, DL (CNN/RNN/LSTM/GRU), GAN, ensemble, NLP, and graph/network-embedding methods
+ & N/A (reviews the field, not a single method)
+ & Accuracy, Precision, Recall, F1, FPR, AUC-ROC, efficiency (as reported across cited works)
+ & N/A --- cited works range \textbf{91.5--98.9\%} \\
+
+Uncovering the Cloak (Li et al., IEEE Access 2023) --- \textit{SLR}
+ & N/A --- systematic review of 30 primary studies, 2012--2022
+ & N/A
+ & N/A
+ & N/A
+ & Surveys client-side, server-side, URL-manipulation, and content-based cloaking, plus cloaking-detection techniques
+ & N/A (reviews the field, not a single method)
+ & N/A --- one cited MITM-toolkit classifier reached 99.9\%
+ & N/A \\
+
+\end{longtable}
+
+\newpage
+\begin{center}
+{\Large \textbf{Limitations and Research Gaps, per Paper}}
+\end{center}
+\vspace{6pt}
+
+\footnotesize
+\begin{longtable}{L{4cm} L{10.5cm} L{10.5cm}}
+\toprule
+\textbf{Paper} & \textbf{Limitation (as stated by the authors)} & \textbf{Gap / Future Work (as stated by the authors)} \\
+\midrule
+\endfirsthead
+\toprule
+\textbf{Paper} & \textbf{Limitation (as stated by the authors)} & \textbf{Gap / Future Work (as stated by the authors)} \\
+\midrule
+\endhead
+\bottomrule
+\endfoot
+\bottomrule
+\endlastfoot
+
+ResMLP
+ & No dedicated limitations section; implicitly, the 7-block residual architecture adds complexity, and the authors state ``achieving optimal detection accuracy remains an ongoing pursuit.''
+ & Extend to multi-class classification; streamline/reduce the residual pipeline's complexity; improve adversarial robustness; integrate real-time monitoring. \\
+
+Feature Extension
+ & URL-only: does not analyze page content or malicious JavaScript in phishing sites; BERT component is computationally expensive.
+ & Add web-content detection for full coverage; optimize/lighten the BERT model; extend to blockchain and cryptocurrency-specific phishing threats. \\
+
+Multimodal XAI
+ & Misclassifies some popular legitimate sites due to coincidental structural similarity; screenshot model sensitive to resolution/aspect-ratio mismatches; late fusion builds no joint cross-modal representation; base models trained independently.
+ & Move to a hybrid binding scheme with shared latent representations and cross-modal attention (esp.\ HTML+screenshot); joint cross-modal XAI; systematic adversarial-robustness evaluation. \\
+
+Evaluating Feature Engineering
+ & Not explicitly stated for their own study (limitations discussed are of prior/related work, not this paper's).
+ & Cascading architecture: cheap URL analysis first, heavier content/relationship analysis only for borderline cases; craft further derived features; ensemble methods with comprehensive feature sets. \\
+
+PhishOFE
+ & No dynamic JavaScript/interaction analysis (static features only); not designed for homograph attacks (Latin-script dataset only, not systematically evaluated against them); limited multilingual/internationalized URL coverage; performance tightly coupled to this specific dataset.
+ & Homograph-attack detection via character normalization, visual-similarity metrics, and Unicode-aware features; unsupervised learning (clustering, autoencoders, one-class) for novel attacks; multilingual URL datasets; deployable end-user application. \\
+
+Layered Model
+ & Brand-jacking layer requires brand names of length $\geq 6$ (shorter names risk false positives); restricted to a fixed list of most-phished brands, so squatting on unlisted brands relies on the lexical layer alone.
+ & Expand the brand list; explore alternative transforms for length-based features (binning, rank, log-scale); apply deep learning; extend fuzzy matching to non-space/complex-morphology languages. \\
+
+X-PHIDE
+ & Accuracy drops substantially under dataset shift (70.65--90.72\% range); large memory footprint limits browser deployment; no automatic retraining; not built for concurrent-request load; Chrome-only; vulnerable to evolving obfuscation (shorteners, homoglyphs, percent-encoding).
+ & Model compression/distillation (pruning, quantization, ONNX); automatic model updating; multi-model ensembling; cross-browser support; adversarial retraining with runtime WHOIS/DNS validation checks. \\
+
+Staying Ahead of Phishers (survey)
+ & High false-positive rates in traditional ML/similarity methods; adversarial vulnerability; narrow/imbalanced datasets; poor cross-domain generalizability; ``dark-box'' deep-learning/GAN interpretability; high compute cost; concept drift as attacks evolve.
+ & Explainable AI (saliency maps, attention, LIME); federated learning/differential privacy; contextual/behavioral analysis; cross-domain transfer learning; adaptive/incremental retraining; model compression (pruning, quantization, distillation); stronger adversarial defenses. \\
+
+Uncovering the Cloak (SLR)
+ & Most detection is server-based, sharing blacklists' latency weakness; very few detection strategies account for cloaking at all; a small number of sources drive over 80\% of successful attacks; crawler ecosystems lack fingerprinting diversity.
+ & Broaden temporal scope and databases; diversify literature types reviewed; conduct focused studies of individual cloaking/detection mechanisms; target the small set of sources behind most attacks; improve anti-phishing data-sharing and takedown collaboration. \\
+
+\end{longtable}
+
+\vspace{8pt}
+\footnotesize\textit{Note: two papers (Kavya \& Sumathi; Li et al.) are literature reviews rather than
+original experiments, and are marked N/A where a column requires a primary dataset, algorithm, or
+accuracy figure that a review does not produce on its own.}
+
+\end{document}

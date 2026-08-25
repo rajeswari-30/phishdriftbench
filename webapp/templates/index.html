@@ -1,0 +1,280 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<title>Phishing URL Checker — Demo</title>
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<style>
+  :root{
+    --bg:#f5f6f8; --surface:#ffffff; --ink:#1a2130; --ink-soft:#3a4353; --muted:#616b7a;
+    --line:#dde1e7; --accent:#0f6e73;
+    --phish-fg:#9c3324; --phish-bg:#fbe7e2;
+    --legit-fg:#146c47; --legit-bg:#e3f3ea;
+    --unsure-fg:#8a5a10; --unsure-bg:#fcf1dd;
+  }
+  *{ box-sizing:border-box; }
+  body{
+    margin:0; background:var(--bg); color:var(--ink);
+    font-family: ui-sans-serif, "Segoe UI", system-ui, sans-serif;
+    display:flex; flex-direction:column; align-items:center; gap:1.5rem; padding:3rem 1.25rem;
+  }
+  .card{
+    width:100%; max-width:640px; background:var(--surface);
+    border:1px solid var(--line); border-radius:14px; padding:2rem 2.25rem;
+    box-shadow:0 1px 2px rgba(20,25,35,.04), 0 10px 30px -14px rgba(20,25,35,.15);
+  }
+  h1{ font-family: ui-serif, Georgia, serif; font-size:1.5rem; margin:0 0 .3rem; }
+  p.sub{ color:var(--muted); margin:0 0 1.5rem; font-size:.92rem; }
+  form{ display:flex; gap:.6rem; }
+  input[type=text]{
+    flex:1; padding:.7rem .9rem; border-radius:8px; border:1px solid var(--line);
+    font-size:.95rem; font-family: ui-monospace, "SF Mono", Menlo, monospace;
+  }
+  input[type=text]:focus{ outline:2px solid var(--accent); outline-offset:1px; }
+  button{
+    padding:.7rem 1.3rem; border-radius:8px; border:none; background:var(--accent);
+    color:white; font-size:.95rem; font-weight:600; cursor:pointer;
+  }
+  button:hover{ opacity:.92; }
+  button:disabled{ opacity:.6; cursor:default; }
+
+  .examples{ margin-top:.7rem; display:flex; flex-wrap:wrap; gap:.4rem; }
+  .examples button{
+    background:var(--bg); color:var(--muted); border:1px solid var(--line);
+    font-weight:500; font-size:.78rem; padding:.35rem .6rem;
+  }
+
+  #result{ margin-top:1.75rem; }
+  .verdict{
+    display:inline-flex; align-items:center; gap:.5rem; padding:.4rem .8rem;
+    border-radius:999px; font-weight:700; font-size:.95rem;
+  }
+  .verdict.phishing{ background:var(--phish-bg); color:var(--phish-fg); }
+  .verdict.legitimate{ background:var(--legit-bg); color:var(--legit-fg); }
+  .verdict.uncertain{ background:var(--unsure-bg); color:var(--unsure-fg); }
+  .confidence{ color:var(--muted); font-size:.85rem; margin-left:.6rem; }
+  .abstain-note{
+    margin-top:.9rem; padding:.7rem .9rem; border-radius:8px;
+    background:var(--unsure-bg); border:1px solid #edd9b0;
+    color:var(--unsure-fg); font-size:.86rem; line-height:1.5;
+  }
+
+  .section-title{
+    font-size:.72rem; text-transform:uppercase; letter-spacing:.06em; color:var(--muted);
+    margin:1.1rem 0 .4rem; font-weight:600;
+  }
+  ul{ margin:0; padding-left:1.2rem; font-size:.88rem; color:var(--ink-soft); }
+  li{ margin-bottom:.3rem; }
+  .error{ color:var(--phish-fg); font-size:.9rem; }
+  .note{
+    margin-top:1.75rem; padding-top:1rem; border-top:1px solid var(--line);
+    color:var(--muted); font-size:.78rem; line-height:1.5;
+  }
+  .card + .card{ margin-top:1.5rem; }
+  table.lookup{ width:100%; border-collapse:collapse; font-size:.88rem; margin-top:1rem; }
+  table.lookup td{ padding:.4rem .3rem; border-bottom:1px solid var(--line); }
+  table.lookup td:first-child{ color:var(--muted); width:45%; }
+  table.lookup td.mono{ font-family: ui-monospace, "SF Mono", Menlo, monospace; font-size:.82rem; }
+  .yes{ color:var(--legit-fg); font-weight:600; }
+  .no{ color:var(--phish-fg); font-weight:600; }
+</style>
+</head>
+<body>
+  <div class="card">
+    <h1>Phishing URL Checker</h1>
+    <p class="sub">Paste a URL. This is a demo model trained on real phishing + legitimate URL data — no page is fetched, only the URL string is analysed.</p>
+
+    <form id="form">
+      <input type="text" id="url" placeholder="e.g. http://paypal-secure-login.xyz/verify" autocomplete="off" />
+      <button type="submit" id="submitBtn">Check</button>
+    </form>
+    <div class="examples" id="urlExamples">
+      <button type="button" data-url="http://paypal-secure-login-verify.account-update.xyz/signin">try a phishing example</button>
+      <button type="button" data-url="https://github.com/anthropics/claude-code">try a legitimate example</button>
+      <button type="button" data-url="https://bit.ly/3xK9zQ2">try a shortener</button>
+      <button type="button" data-url="https://arnaz0n-secure.com/login">try a look-alike domain</button>
+    </div>
+
+    <div id="result"></div>
+
+    <div class="note">
+      Demo model only, built from lexical URL features (length, tokens, entropy, brand names,
+      look-alike spellings, etc.) — no network lookups. Three possible answers, not two: it will
+      return <strong>UNCERTAIN</strong> rather than guess when the URL text genuinely does not
+      contain enough evidence — for link shorteners, whose destination is not derivable from the
+      URL at all, or when the score falls inside a calibrated uncertainty band measured on
+      held-out data. It is still not perfectly accurate: telling a well-known brand's real domain
+      from a look-alike is a genuinely hard problem. That trade-off, and knowing when to abstain
+      instead of bluffing, is itself one of the things this project studies.
+    </div>
+  </div>
+
+  <div class="card">
+    <h1 style="font-size:1.15rem;">Feature-Provenance Lookup (C3)</h1>
+    <p class="sub">
+      This is a <strong>separate</strong> tool, not used by the checker above. It performs one real
+      WHOIS lookup, one real DNS resolution, and one real TLS handshake against any domain you enter,
+      so you can see the C3 audit's underlying lookups actually happen — live, not from a saved CSV.
+      This project's own finding was that these lookup-based ("P2") features do <strong>not</strong>
+      improve detection over lexical features alone, which is why the checker above never uses them.
+    </p>
+    <form id="provForm">
+      <input type="text" id="domain" placeholder="e.g. google.com" autocomplete="off" />
+      <button type="submit" id="provBtn">Look up</button>
+    </form>
+    <div class="examples" id="domainExamples">
+      <button type="button" data-domain="google.com">a real, long-lived domain</button>
+      <button type="button" data-domain="this-domain-should-not-exist-xyzabc123.com">a nonexistent domain</button>
+    </div>
+    <div id="provResult"></div>
+  </div>
+
+<script>
+const form = document.getElementById('form');
+const urlInput = document.getElementById('url');
+const resultDiv = document.getElementById('result');
+const submitBtn = document.getElementById('submitBtn');
+
+document.querySelectorAll('#urlExamples button').forEach(b => {
+  b.addEventListener('click', () => { urlInput.value = b.dataset.url; form.requestSubmit(); });
+});
+
+function render(data) {
+  if (data.error) {
+    resultDiv.innerHTML = `<p class="error">${data.error}</p>`;
+    return;
+  }
+  const cls = data.verdict === 'PHISHING' ? 'phishing'
+            : data.verdict === 'UNCERTAIN' ? 'uncertain' : 'legitimate';
+  const label = data.verdict === 'UNCERTAIN' ? 'UNCERTAIN — needs review' : data.verdict;
+  let html = `<span class="verdict ${cls}">${label}</span>`;
+  // An abstained result has no confident verdict, so reporting a confidence
+  // figure beside it would contradict the whole point of abstaining.
+  if (!data.abstained) {
+    html += `<span class="confidence">${(data.confidence * 100).toFixed(1)}% confidence</span>`;
+  }
+  if (data.abstained) {
+    html += `<div class="abstain-note"><strong>Why no verdict:</strong> ${data.abstain_reason}.
+      <br><br>Refusing to answer is a deliberate design decision, not a failure: this model reads
+      only the URL text, and answering confidently without evidence is exactly the
+      overconfidence this project set out to measure.</div>`;
+  }
+  if (data.squatting_reasons.length) {
+    html += `<div class="section-title">Brand-jacking / squatting screen</div><ul>`;
+    data.squatting_reasons.forEach(r => html += `<li>${r}</li>`);
+    html += `</ul>`;
+    if (data.squatting_flagged) {
+      html += `<p style="font-size:.85rem;color:var(--muted);margin-top:.3rem;">This alone was enough to call it PHISHING, without needing the ML layer.</p>`;
+    }
+  }
+  html += `<div class="section-title">ML layer (phishing score ${(data.ml_score * 100).toFixed(1)}%) — top factors for this URL</div><ul>`;
+  if (data.top_reasons.length) {
+    data.top_reasons.forEach(r => html += `<li>${r}</li>`);
+  } else {
+    html += `<li>(no single feature stood out strongly)</li>`;
+  }
+  html += `</ul>`;
+  html += `<div class="section-title">SHAP force plot (exact TreeSHAP, via the shap package)</div>`;
+  html += `<div id="shapPlot"><p style="font-size:.85rem;color:var(--muted);">Rendering plot…</p></div>`;
+  resultDiv.innerHTML = html;
+}
+
+async function renderShapPlot(url) {
+  const shapDiv = document.getElementById('shapPlot');
+  if (!shapDiv) return;
+  try {
+    const res = await fetch('/api/shap_plot', {
+      method: 'POST',
+      headers: {'Content-Type': 'application/json'},
+      body: JSON.stringify({url}),
+    });
+    const data = await res.json();
+    if (data.error) {
+      shapDiv.innerHTML = `<p class="error">${data.error}</p>`;
+      return;
+    }
+    shapDiv.innerHTML = `<img src="data:image/png;base64,${data.png_base64}" style="max-width:100%;" alt="SHAP force plot" />`;
+  } catch (err) {
+    shapDiv.innerHTML = `<p class="error">Plot request failed: ${err}</p>`;
+  }
+}
+
+form.addEventListener('submit', async (e) => {
+  e.preventDefault();
+  const url = urlInput.value.trim();
+  if (!url) return;
+  submitBtn.disabled = true;
+  submitBtn.textContent = 'Checking…';
+  try {
+    const res = await fetch('/api/check', {
+      method: 'POST',
+      headers: {'Content-Type': 'application/json'},
+      body: JSON.stringify({url}),
+    });
+    const data = await res.json();
+    render(data);
+    if (!data.error) renderShapPlot(url);
+  } catch (err) {
+    resultDiv.innerHTML = `<p class="error">Request failed: ${err}</p>`;
+  } finally {
+    submitBtn.disabled = false;
+    submitBtn.textContent = 'Check';
+  }
+});
+
+const provForm = document.getElementById('provForm');
+const domainInput = document.getElementById('domain');
+const provResult = document.getElementById('provResult');
+const provBtn = document.getElementById('provBtn');
+
+document.querySelectorAll('[data-domain]').forEach(b => {
+  b.addEventListener('click', () => { domainInput.value = b.dataset.domain; provForm.requestSubmit(); });
+});
+
+function renderProvenance(data) {
+  if (data.error) {
+    provResult.innerHTML = `<p class="error">${data.error}</p>`;
+    return;
+  }
+  const yn = (v) => v ? '<span class="yes">yes</span>' : '<span class="no">no</span>';
+  provResult.innerHTML = `
+    <table class="lookup">
+      <tr><td>Domain looked up</td><td class="mono">${data.domain}</td></tr>
+      <tr><td>WHOIS lookup succeeded</td><td>${yn(data.whois_success)}</td></tr>
+      <tr><td>WHOIS registration date</td><td class="mono">${data.whois_registration_date ?? '—'}</td></tr>
+      <tr><td>WHOIS registrar country</td><td class="mono">${data.whois_registrar_country ?? '—'}</td></tr>
+      <tr><td>DNS resolved</td><td>${yn(data.dns_success)}</td></tr>
+      <tr><td>DNS A records</td><td class="mono">${data.dns_a_record_count}</td></tr>
+      <tr><td>DNS MX record present</td><td>${yn(data.dns_mx_record_present)}</td></tr>
+      <tr><td>DNS NS record count</td><td class="mono">${data.dns_ns_record_count}</td></tr>
+      <tr><td>SSL/TLS certificate present</td><td>${yn(data.ssl_present)}</td></tr>
+      <tr><td>SSL certificate age (days)</td><td class="mono">${data.ssl_certificate_age_days ?? '—'}</td></tr>
+    </table>
+  `;
+}
+
+provForm.addEventListener('submit', async (e) => {
+  e.preventDefault();
+  const domain = domainInput.value.trim();
+  if (!domain) return;
+  provBtn.disabled = true;
+  provBtn.textContent = 'Looking up…';
+  provResult.innerHTML = '<p style="color:var(--muted);font-size:.85rem;">Contacting WHOIS/DNS/TLS servers — this takes a few seconds…</p>';
+  try {
+    const res = await fetch('/api/provenance', {
+      method: 'POST',
+      headers: {'Content-Type': 'application/json'},
+      body: JSON.stringify({domain}),
+    });
+    const data = await res.json();
+    renderProvenance(data);
+  } catch (err) {
+    provResult.innerHTML = `<p class="error">Request failed: ${err}</p>`;
+  } finally {
+    provBtn.disabled = false;
+    provBtn.textContent = 'Look up';
+  }
+});
+</script>
+</body>
+</html>
