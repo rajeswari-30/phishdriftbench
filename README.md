@@ -1,5 +1,9 @@
 # PhishDriftBench + DASH
 
+[![License: MIT](https://img.shields.io/badge/code%20license-MIT-blue.svg)](LICENSE)
+[![Python 3.12](https://img.shields.io/badge/python-3.12-blue.svg)](requirements.txt)
+[![Status](https://img.shields.io/badge/status-active%20research-yellow.svg)](RESEARCH_GAP_AND_IMPROVEMENTS.md)
+
 **Project title:**
 *The Reported–Deployed Gap in Phishing URL Detection: A Time-, Source-, Provenance- and
 Evasion-Aware Benchmark with Drift-Aware Selective Hardening*
@@ -357,3 +361,11 @@ was missing an entire class until this was caught and fixed (now labelled `"legi
 work of exactly this shape, and it is Scopus/SCIE indexed with a 4–8 week first decision.
 Fallbacks: IEEE ICC / GLOBECOM / TrustCom for a shorter conference version; Computers & Security
 for a slower, no-APC route.
+
+## License
+
+The code (`src/`, `scripts/`, `tests/`, `webapp/`) is [MIT licensed](LICENSE) — use it, fork it,
+build on it, with attribution. The paper draft (`paper/`) and the write-ups (`docs/`, this
+README, `GAP_ANALYSIS.md`, `RESEARCH_GAP_AND_IMPROVEMENTS.md`) are all rights reserved pending
+publication. `reference_papers/` holds other authors' copyrighted work and is never published
+here.
