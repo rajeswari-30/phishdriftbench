@@ -8,6 +8,9 @@ Evasion-Aware Benchmark with Drift-Aware Selective Hardening*
 gap, what this project built to close it, and the real charts + numbers that demonstrate it — the
 fastest way to understand what this project is and whether it worked.
 
+**→ See [docs/GAP_ANALYSIS.md](docs/GAP_ANALYSIS.md)** for the decision log behind the ten-paper
+base corpus and which components got built and why.
+
 ---
 
 ## Abstract
@@ -106,6 +109,9 @@ calibrated abstention band that escalates instead of guessing, reported as a cov
 Report exact and near-duplicate rates across the train/test boundary for every corpus, and
 accuracy before and after deduplication. With *k*-fold CV over scraped corpora, campaign
 duplicates are near-certain.
+
+For the full corpus-selection reasoning behind these eight points (which papers, why, and what got
+cut), see [docs/GAP_ANALYSIS.md](docs/GAP_ANALYSIS.md).
 
 ---
 
@@ -258,10 +264,10 @@ paths to them, missing the *actual* URL shapes those specific products use.
 ```
 phishdriftbench/
 ├── README.md                 ← this document
-├── GAP_ANALYSIS.md           ← detailed gap analysis and corpus decisions
 ├── RESEARCH_GAP_AND_IMPROVEMENTS.md  ← research gap + results, start here
 ├── requirements.txt           ← pip dependencies (see .venv/ setup below)
 ├── docs/
+│   ├── GAP_ANALYSIS.md        ← detailed corpus-selection decision log
 │   ├── arch.tex / arch.pdf / arch.png    ← architecture diagram
 │   ├── threading-notes.md    ← a real cross-library deadlock hit during
 │   │                            implementation and how it's worked around

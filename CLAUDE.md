@@ -10,7 +10,7 @@ plus DASH (Drift-Aware Selective Hardening), a proposed lightweight mitigation. 
 page is ever fetched, rendered, hosted, or transmitted.
 
 Start with [RESEARCH_GAP_AND_IMPROVEMENTS.md](RESEARCH_GAP_AND_IMPROVEMENTS.md) for the research
-gap and the actual results; [GAP_ANALYSIS.md](GAP_ANALYSIS.md) for the base-paper corpus and gap
+gap and the actual results; [docs/GAP_ANALYSIS.md](docs/GAP_ANALYSIS.md) for the base-paper corpus and gap
 decisions; [README.md](README.md) for setup and repository layout.
 
 ## Setup and commands
