@@ -11,7 +11,7 @@ results/*
 .DS_Store
 .pytest_cache/
 catboost_info/
-papers/
+reference_papers/
 paper/*.log
 paper/*.blg
 paper/*.aux

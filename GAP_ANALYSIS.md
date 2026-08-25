@@ -2,7 +2,7 @@
 
 > **AMENDMENT — FINAL CORPUS (10 base papers).** The corpus is now settled. `PhishHaven`
 > (2020, failed the 2023+ recency rule) and the duplicate `Paper 1.pdf` were moved to
-> `papers/excluded/` — **moved, not deleted**, so both are recoverable. The two candidate
+> `reference_papers/excluded/` — **moved, not deleted**, so both are recoverable. The two candidate
 > replacements (Aggregation-Based Ensemble; Enhancing Generalization BERT) were trialled
 > and removed by the project.
 >

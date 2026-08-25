@@ -291,7 +291,7 @@ phishdriftbench/
 ├── webapp/                    ← Flask demo app
 ├── data/{raw,processed}/       ← real datasets go here once acquired (gitignored)
 ├── results/                    ← experiment outputs go here (gitignored)
-└── papers/                     ← reference PDFs: base/ (10 base papers) and excluded/
+└── reference_papers/            ← reference PDFs: base/ (10 base papers) and excluded/
                                     (removed from the base set, recoverable) — gitignored,
                                     kept locally only (not pushed: other authors' copyrighted work)
 ```
