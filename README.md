@@ -283,7 +283,7 @@ phishdriftbench/
 │   ├── eval/dedup.py          ← duplicate/near-duplicate leakage probe (LSH)
 │   ├── eval/isolated_run.py   ← runs each baseline in its own subprocess (see threading-notes.md)
 │   └── dash/                  ← stability.py (C4 scoring) + dash.py (C5 mitigation)
-├── scripts/
+├── scripts/                    ← see scripts/README.md for the full grouped index (38 files)
 │   ├── smoke_test.py          ← end-to-end pipeline check on synthetic data
 │   ├── train_demo_v8.py       ← current demo-model training recipe (see history in train_demo_v7.py)
 │   └── verify_length_leakage.py, locate_leakage_mechanism.py  ← earlier leakage probes
