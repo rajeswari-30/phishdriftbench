@@ -5,6 +5,12 @@ data/raw/*
 data/processed/*
 !data/raw/.gitkeep
 !data/processed/.gitkeep
+# The shipped demo model IS committed (~1.2 MB): without it a fresh clone has
+# the code but no working demo, and reproducing it means an ~8-minute retrain
+# plus the raw corpora, which are not redistributable here. The *_backup/
+# directories stay ignored -- they are local rollback points, not artifacts a
+# cloner needs.
+!data/processed/demo_model/
 results/*
 !results/.gitkeep
 *.egg-info/
