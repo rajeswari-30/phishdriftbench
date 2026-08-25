@@ -1,0 +1,5 @@
+model,train,test,auc
+v7 (proposed),PhiUSIIL,PhiUSIIL,0.9966697777777778
+v7 (proposed),PhiUSIIL,PhishTank+Tranco,0.8748777777777776
+v7 (proposed),PhishTank+Tranco,PhiUSIIL,0.9159533333333335
+v7 (proposed),PhishTank+Tranco,PhishTank+Tranco,0.997009111111111

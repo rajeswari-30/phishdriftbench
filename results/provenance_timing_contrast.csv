@@ -1,0 +1,4 @@
+class,bucket,n,whois_success_rate,dns_success_rate,ssl_present_rate
+legitimate,legitimate,200,0.905,0.78,0.725
+phishing,old_submission,30,0.7333333333333333,0.8666666666666667,0.8333333333333334
+phishing,recent_submission,55,0.7454545454545455,0.5818181818181818,0.4727272727272727

@@ -1,0 +1,26 @@
+# Normalise line endings in the repository to LF regardless of the checkout
+# platform. This project was authored on macOS and is now developed on Windows;
+# without this, every file touched on Windows shows up as wholly rewritten in a
+# diff, which makes review of the results CSVs meaningless.
+* text=auto eol=lf
+
+# Result data: force LF and mark as diffable text so review shows real changes.
+*.csv text eol=lf
+*.json text eol=lf
+*.md text eol=lf
+*.py text eol=lf
+*.tex text eol=lf
+*.bib text eol=lf
+
+# Binary: never munge, never attempt a textual diff.
+*.png binary
+*.pdf binary
+*.zip binary
+*.npy binary
+*.docx binary
+
+# Generated result files: keep them out of GitHub's language statistics and
+# collapse them by default in pull-request diffs, without excluding them from
+# review — `linguist-generated` hides the diff behind a click rather than
+# discarding it.
+results/*.csv linguist-generated=true

@@ -1,0 +1,7 @@
+url,score,top_features
+https://github.com/torvalds/linux,0.015314390882849693,"num_subdomains-1.81, path_length-1.47, num_dots-0.97, num_slashes+0.84"
+https://bbc.co.uk/news,0.0032362155616283417,"tld_length-3.02, num_subdomains-1.78, avg_token_length-1.52, special_ratio+1.23"
+https://en.wikipedia.org/wiki/Phishing,0.9999501705169678,"num_subdomains+5.03, num_dots+3.23, tld_length+0.97, num_slashes+0.79"
+https://paypal.com,0.0006344068679027259,"num_subdomains-1.91, entropy_url-1.71, path_length-1.64, num_brand_tokens-1.17"
+http://secure-paypal-login.verify-account.tk/signin.php,0.9999985694885254,"num_subdomains+3.04, num_dots+2.93, has_https+2.81, path_length+2.29"
+http://192.168.1.1/wp-admin/paypal/login.html,0.9955658316612244,"has_https+4.39, num_dots+4.34, avg_token_length-1.49, path_length-1.11"

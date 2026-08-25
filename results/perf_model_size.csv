@@ -1,0 +1,3 @@
+artifact,MB
+stage-1 XGBoost booster,0.713457
+stage-2 DistilBERT weights (fp32),265.45152

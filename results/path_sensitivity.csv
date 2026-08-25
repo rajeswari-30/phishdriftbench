@@ -1,0 +1,7 @@
+stage1,bucket,n,flag_bare,flag_withpath,route_bare,route_withpath,flag_multiplier
+v3 (=v2 stage1),legit_tranco_tail,40000,0.024425,1.0,0.149325,1.0,40.9
+v4,legit_tranco_tail,40000,0.00015,1.0,0.0045,1.0,6666.7
+v5,legit_tranco_tail,40000,2.5e-05,1.0,0.000875,1.0,40000.0
+v3 (=v2 stage1),legit_phiusiil,40000,0.001425,1.0,0.01005,1.0,701.8
+v4,legit_phiusiil,40000,0.002025,1.0,0.017,1.0,493.8
+v5,legit_phiusiil,40000,0.002225,1.0,0.017475,1.0,449.4

@@ -1,0 +1,36 @@
+model,bucket,n,errors,rate
+v7 (proposed),legit_tail_bare,50000,0,0.0
+v7 (proposed),legit_tail_mixed,50000,1,2e-05
+v7 (proposed),legit_phi_bare,50000,15,0.0003
+v7 (proposed),legit_phi_mixed,50000,40,0.0008
+v7 (proposed),phish_large,50000,1424,0.02848
+v7 @0.5 (untuned),legit_tail_bare,50000,0,0.0
+v7 @0.5 (untuned),legit_tail_mixed,50000,5,0.0001
+v7 @0.5 (untuned),legit_phi_bare,50000,44,0.00088
+v7 @0.5 (untuned),legit_phi_mixed,50000,123,0.00246
+v7 @0.5 (untuned),phish_large,50000,1131,0.02262
+B1,legit_tail_bare,50000,433,0.00866
+B1,legit_tail_mixed,50000,32557,0.65114
+B1,legit_phi_bare,50000,17,0.00034
+B1,legit_phi_mixed,50000,32401,0.64802
+B1,phish_large,50000,593,0.01186
+B2,legit_tail_bare,50000,859,0.01718
+B2,legit_tail_mixed,50000,32711,0.65422
+B2,legit_phi_bare,50000,43,0.00086
+B2,legit_phi_mixed,50000,32410,0.6482
+B2,phish_large,50000,519,0.01038
+B3,legit_tail_bare,50000,478,0.00956
+B3,legit_tail_mixed,50000,32554,0.65108
+B3,legit_phi_bare,50000,73,0.00146
+B3,legit_phi_mixed,50000,32421,0.64842
+B3,phish_large,50000,458,0.00916
+B4,legit_tail_bare,50000,856,0.01712
+B4,legit_tail_mixed,50000,32705,0.6541
+B4,legit_phi_bare,50000,50,0.001
+B4,legit_phi_mixed,50000,32413,0.64826
+B4,phish_large,50000,524,0.01048
+B5,legit_tail_bare,50000,430,0.0086
+B5,legit_tail_mixed,50000,32561,0.65122
+B5,legit_phi_bare,50000,4,8e-05
+B5,legit_phi_mixed,50000,32399,0.64798
+B5,phish_large,50000,349,0.00698

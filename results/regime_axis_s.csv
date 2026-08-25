@@ -1,0 +1,5 @@
+train,test,auc
+PhiUSIIL,PhiUSIIL,0.9946702222222221
+PhiUSIIL,PhishTank+Tranco,0.8498244444444444
+PhishTank+Tranco,PhiUSIIL,0.8631491111111111
+PhishTank+Tranco,PhishTank+Tranco,0.9978993333333334

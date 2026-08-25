@@ -1,0 +1,8 @@
+regime,routed_to_stage2_frac,ms_per_url,urls_per_sec,condition
+prevalence,0.4938073394495413,1.7040622349013865,586.833027291324,normal traffic / cross-source
+axis_s_PhiUSIIL,0.4964824120603015,1.7131956758520976,583.7044851882589,normal traffic / cross-source
+axis_s_PhishTank+Tranco,0.5281714483235396,1.8213908479498644,549.0309787850247,normal traffic / cross-source
+e2_contemporary,0.982,3.3708875837807812,296.65777192083095,evasion attack (E1/E2)
+homoglyph_base,0.9925,3.4067375003762086,293.53597096623065,evasion attack (E1/E2)
+homoglyph_atk,0.9995,3.43063744477316,291.491017660166,evasion attack (E1/E2)
+e2_older,1.0,3.4323445836586566,291.3460393111419,evasion attack (E1/E2)

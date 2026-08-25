@@ -1,0 +1,4 @@
+stage,us_per_url,ms_per_url
+feature extraction (33 P1),16.647270997054875,0.016647270997054875
+stage-1 XGBoost predict,1.4195416685348996,0.0014195416685348996
+stage-2 BERT embed (incl. subprocess start),3414.277770993067,3.414277770993067

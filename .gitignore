@@ -11,8 +11,17 @@ data/processed/*
 # directories stay ignored -- they are local rollback points, not artifacts a
 # cloner needs.
 !data/processed/demo_model/
+# Experiment results: the derived CSVs ARE committed (~180 KB of plain text,
+# 56 files). They are the evidence behind every number in paper/main.tex, they
+# diff meaningfully in review, and regenerating them needs the raw corpora plus
+# hours of compute. Binary intermediates are not committed -- they are large,
+# undiffable, and nothing reads them back (results/_v5_scores.npy is written by
+# run_b6_v4_v5.py and never consumed).
 results/*
 !results/.gitkeep
+!results/README.md
+!results/*.csv
+results/_*.csv
 *.egg-info/
 .DS_Store
 .pytest_cache/
