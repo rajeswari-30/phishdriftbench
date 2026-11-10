@@ -331,7 +331,8 @@ Known limitations, left visible in the tool rather than hidden:
 phishdriftbench/
 ├── README.md                 ← this document
 ├── RESEARCH_GAP_AND_IMPROVEMENTS.md  ← research gap + results, start here
-├── requirements.txt           ← pip dependencies (see .venv/ setup below)
+├── requirements.txt           ← minimal hosted-demo runtime dependencies
+├── requirements-research.txt  ← full experiment / test environment dependencies
 ├── docs/
 │   ├── GAP_ANALYSIS.md        ← detailed corpus-selection decision log
 │   ├── arch.tex / arch.pdf / arch.png    ← architecture diagram
@@ -372,8 +373,10 @@ phishdriftbench/
                                     kept locally only (not pushed: other authors' copyrighted work)
 ```
 
-**Setup:** `python3 -m venv .venv && source .venv/bin/activate && pip install -r requirements.txt`
+**Setup:** `python3 -m venv .venv && source .venv/bin/activate && pip install -r requirements-research.txt`
 (macOS also needs `brew install libomp` for XGBoost/LightGBM/CatBoost — see threading-notes.md).
+`requirements.txt` is intentionally limited to the Flask demo runtime so Vercel can bundle it
+within its serverless function size limit.
 **Sanity check:** `PYTHONPATH=src python scripts/smoke_test.py` runs the whole pipeline on
 synthetic data end-to-end without touching real datasets.
 **Unit tests:** `pytest` (from the repo root; `pytest.ini` sets `pythonpath = src`) runs the unit

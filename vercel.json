@@ -1,3 +1,7 @@
 {
-  "installCommand": "python -m pip install -r requirements-vercel.txt"
+  "functions": {
+    "api/index.py": {
+      "excludeFiles": "{Base Papers/**,docs/**,extension/**,paper/**,reference_papers/**,results/**,scripts/**,tests/**,*.pptx}"
+    }
+  }
 }

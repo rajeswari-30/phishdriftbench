@@ -16,7 +16,7 @@ decisions; [README.md](README.md) for setup and repository layout.
 ## Setup and commands
 
 ```bash
-python3 -m venv .venv && source .venv/bin/activate && pip install -r requirements.txt
+python3 -m venv .venv && source .venv/bin/activate && pip install -r requirements-research.txt
 ```
 
 macOS also needs `brew install libomp` for XGBoost/LightGBM/CatBoost (see
