@@ -255,6 +255,17 @@ PYTHONPATH=src python scripts/stress_test_demo.py       # regression battery, 60
 A trained model and its Layer-0 lists are committed under `data/processed/demo_model/`, so a
 fresh clone can run the demo without retraining.
 
+### Deploying the web demo to Vercel
+
+Import this GitHub repository at [vercel.com/new](https://vercel.com/new). Vercel detects the Flask
+app in `api/index.py`; `vercel.json` installs only the packages needed by the hosted demo, rather
+than the full research environment. The included model and trusted-domain lists are deployed with
+the app. Vercel assigns a free `*.vercel.app` address after deployment.
+
+Unlike the local demo, the hosted demo sends each submitted URL to the Vercel function for
+analysis. The destination page is not opened. Do not submit URLs containing private tokens or
+personal data.
+
 ### How the demo answers, in three layers
 
 A live battery of 73 everyday URLs (`scripts/stress_test_demo.py`) found 13 **real** sites called
