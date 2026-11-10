@@ -75,12 +75,34 @@ def _squatting_score(feat: pd.DataFrame) -> np.ndarray:
     def col(name):
         return feat[name].to_numpy(dtype=float) if name in feat.columns else np.zeros(len(feat))
 
+    # num_brand_tokens_extended / num_suspicious_tokens_extended (added after
+    # a live test on a fake "Reserve Bank" URL found Indian institutions and
+    # region-specific bait words like "refund"/"kyc"/"otp" entirely absent)
+    # feed the same brand_signal / bait_signal roles as their paper-frozen
+    # counterparts, at slightly lower weight: they widen coverage but are
+    # individually less battle-tested than the original 13-brand,
+    # english-bait-word lists the paper's own experiments used.
+    # A NEAR-MISS spelling now weighs as much as a subdomain impersonation,
+    # where it used to weigh least of the four. The old ordering had the
+    # evidence backwards: a correctly spelled brand appears in countless
+    # legitimate URLs, while a domain label one edit from "facebook" is
+    # almost never anything but an attempt to be mistaken for it. It cost a
+    # real miss -- faceb00k-login.com came back LEGITIMATE, because 0.6 times
+    # the bait and hyphen context landed at 0.305, just under the 0.5 screen.
+    # Popular real domains that collide with the fuzzy matcher (cloud.microsoft,
+    # t-mobile.com, and 97 others in the top 20k) are unaffected, because the
+    # trusted-domain list in demo/trust.py answers before this screen runs.
+    # No reported number moves: num_brand_tokens_fuzzy is not in
+    # lexical.PAPER_P1_FEATURES, so `col()` returns zeros for it in every
+    # paper experiment, and this row of the reduce contributes nothing there.
     brand_signal = np.maximum.reduce([
-        (col("brand_in_subdomain") > 0).astype(float) * 1.0,       # brand impersonating a subdomain: strongest
+        (col("brand_in_subdomain") > 0).astype(float) * 1.0,       # brand impersonating a subdomain
+        (col("num_brand_tokens_fuzzy") > 0).astype(float) * 1.0,    # near-miss spelling of a brand name
         (col("num_brand_tokens") > 0).astype(float) * 0.7,          # exact brand name present somewhere
-        (col("num_brand_tokens_fuzzy") > 0).astype(float) * 0.6,    # near-miss spelling of a brand name
+        (col("num_brand_tokens_extended") > 0).astype(float) * 0.65,  # extended brand list, exact match
     ])
-    bait_signal = np.minimum(1.0, 0.35 * col("num_suspicious_tokens"))
+    bait_signal = np.minimum(1.0, 0.35 * col("num_suspicious_tokens")
+                              + 0.25 * col("num_suspicious_tokens_extended"))
     context_signal = np.minimum(1.0, 0.30 * col("is_shortener") + 0.12 * np.minimum(col("num_hyphens"), 4))
     return brand_signal * (0.35 + 0.35 * bait_signal + 0.30 * context_signal)
 

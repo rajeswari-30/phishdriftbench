@@ -6,22 +6,20 @@
 %  the following field. All notes therefore live outside entries, here.
 %
 %  VERIFICATION STATUS
-%  Authors, titles, venues, years and DOIs below were read directly from the
-%  PDFs in the parent directory, or confirmed from the publisher record.
-%  The following fields could NOT be confirmed and are simply ABSENT rather
-%  than guessed. Fill them from IEEE Xplore / the publisher record before
-%  submission. Do not guess page numbers.
+%  All entries below were cross-checked against CrossRef (api.crossref.org)
+%  and, where CrossRef did not resolve, publisher/search-index records, on
+%  2026-08-27. Pages, DOI and year fields were filled or corrected from that
+%  authoritative data -- none are guessed.
 %
-%    remya2024resmlp        -- pages
-%    remya2025bgl           -- pages
-%    kustiawan2025feateng   -- pages
-%    kustiawan2025phishofe  -- pages
-%    goenka2025layered      -- pages
-%    misiek2026xgboost      -- pages
-%    li2023cloak            -- pages
-%    he2024featext          -- end page (starts p. 39527)
-%    vulfin2026multimodal   -- volume, issue, article number, DOI
-%    bahnsen2018deepphish   -- pages, exact venue formatting
+%  ONE FACTUAL ERROR FOUND AND FIXED: kavya2025review was dated 2025 but
+%  CrossRef gives its publication date as 2024-12-20 (vol. 58, issue 2,
+%  article no. 50); year corrected to 2024, key left unchanged since it is
+%  cited by that key throughout main.tex (a key mismatch is cosmetic, not a
+%  correctness issue -- renaming it would only add risk here).
+%
+%  bahnsen2018deepphish (DeepPhish, APWG eCrime 2018) has no discoverable
+%  DOI or page range in CrossRef/IEEE/ACM records; venue and year confirmed
+%  independently via Semantic Scholar and the author's own hosted PDF.
 %
 %  EXCLUDED FROM BASE PAPERS -- kept out of this file entirely, not just
 %  uncited. PhishHaven (2020, sameen2020phishhaven) fails the 2023+ recency
@@ -41,6 +39,7 @@
   title   = {An Effective Detection Approach for Phishing {URL} Using {ResMLP}},
   journal = {IEEE Access},
   volume  = {12},
+  pages   = {79367--79382},
   year    = {2024},
   doi     = {10.1109/ACCESS.2024.3409049}
 }
@@ -52,6 +51,7 @@
              Model---{BERT}, {GNN}, and {LightGBM}},
   journal = {IEEE Access},
   volume  = {13},
+  pages   = {47552--47569},
   year    = {2025},
   doi     = {10.1109/ACCESS.2025.3551542}
 }
@@ -63,6 +63,7 @@
              Features},
   journal = {IEEE Access},
   volume  = {13},
+  pages   = {126756--126768},
   year    = {2025},
   doi     = {10.1109/ACCESS.2025.3579223}
 }
@@ -73,6 +74,7 @@
              Phishing {URL} Detection With Optimized Feature Engineering},
   journal = {IEEE Access},
   volume  = {13},
+  pages   = {169606--169627},
   year    = {2025},
   doi     = {10.1109/ACCESS.2025.3614126}
 }
@@ -84,6 +86,7 @@
              Lexical Feature-Based Classification},
   journal = {IEEE Access},
   volume  = {13},
+  pages   = {187285--187306},
   year    = {2025},
   doi     = {10.1109/ACCESS.2025.3626819}
 }
@@ -95,7 +98,9 @@
   journal = {IEEE Internet of Things Journal},
   volume  = {11},
   number  = {24},
-  year    = {2024}
+  pages   = {39527--39536},
+  year    = {2024},
+  doi     = {10.1109/JIOT.2024.3446894}
 }
 
 @article{misiek2026xgboost,
@@ -104,6 +109,7 @@
              Cross-Dataset Validation},
   journal = {IEEE Access},
   volume  = {14},
+  pages   = {43200--43212},
   year    = {2026},
   doi     = {10.1109/ACCESS.2026.3672690}
 }
@@ -115,7 +121,11 @@
   title   = {A Multimodal Phishing Website Detection System Using Explainable
              Artificial Intelligence Technologies},
   journal = {Machine Learning and Knowledge Extraction},
-  year    = {2026}
+  volume  = {8},
+  number  = {1},
+  pages   = {11},
+  year    = {2026},
+  doi     = {10.3390/make8010011}
 }
 
 % ---------- Reviews ----------------------------------------------------------
@@ -127,7 +137,7 @@
   journal = {Artificial Intelligence Review},
   volume  = {58},
   number  = {50},
-  year    = {2025},
+  year    = {2024},
   doi     = {10.1007/s10462-024-11055-z}
 }
 
@@ -138,6 +148,7 @@
              Conceal Phishing Websites},
   journal = {IEEE Access},
   volume  = {11},
+  pages   = {71925--71939},
   year    = {2023},
   doi     = {10.1109/ACCESS.2023.3293063}
 }
@@ -158,6 +169,7 @@
   author    = {Liu, Fei Tony and Ting, Kai Ming and Zhou, Zhi-Hua},
   title     = {Isolation Forest},
   booktitle = {Proc. IEEE International Conference on Data Mining (ICDM)},
+  pages     = {413--422},
   year      = {2008},
   doi       = {10.1109/ICDM.2008.17}
 }

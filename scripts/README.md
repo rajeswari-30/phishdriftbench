@@ -64,7 +64,9 @@ All are run as `PYTHONPATH=src python scripts/<name>.py` from the repo root.
 | Script | What it is |
 |---|---|
 | `train_demo_model.py` | One-time training of the interactive demo's model. |
-| `train_demo_v7.py` / `train_demo_v8.py` / `train_demo_v9.py` / `train_demo_v10.py` | Successive retraining recipes, kept for history (see README.md's mention of v8's documented failures). `v10` is current. |
+| `train_demo_v7.py` … `train_demo_v12.py` | Successive retraining recipes, kept for history; each one's docstring says which measured failure it fixed. `v12` is current. |
+| `build_trusted_domains.py` | Builds the demo's offline Layer-0 lists: trusted domains, hosts that serve user-published pages, and providers that hand out a subdomain per customer. Run it before `train_demo_v12.py`. |
+| `stress_test_demo.py` | The live battery of real-world URL shapes (real sites, phishing patterns, and links whose destination is genuinely unknowable). Regression check for the demo, not a paper experiment. |
 | `demo_cli.py` | Interactive command-line demo: paste a URL, get a verdict + explanation. |
 
 ## Figures

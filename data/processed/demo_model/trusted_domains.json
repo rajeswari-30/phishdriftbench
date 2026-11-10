@@ -1,0 +1,18 @@
+{
+  "built_at": "2026-09-22",
+  "source": "Tranco top 30000 (data/raw/tranco/top-1m.csv)",
+  "filters": {
+    "psl_private_suffix_providers_dropped": 220,
+    "abused_domains_dropped": 133,
+    "abuse_min_phishing_hits": 2,
+    "abuse_min_phishing_hits_top_1000": 25,
+    "host_abuse_min_phishing_hits": 3
+  },
+  "n_trusted": 29647,
+  "n_untrusted_hosts": 132,
+  "n_tenant_domains": 142,
+  "phishing_corpus_urls": 167653,
+  "phishing_urls_on_trusted_domains": 411,
+  "phishing_leak_rate": 0.0024514920699301532,
+  "note": "demo-only; no paper experiment uses this list"
+}

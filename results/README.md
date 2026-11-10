@@ -136,6 +136,12 @@ honestly rather than presenting only the final version.
 - **Raw corpora** (`data/raw/`) — large, and redistribution terms vary by
   source.
 
+## Demo regression battery (not a paper result)
+
+| File | Produced by | Rows × Cols | Contents |
+|---|---|---|---|
+| `demo_stress_test.csv` | `stress_test_demo.py` | 60 × 8 | Verdict the interactive demo gives for 60 real-world URL shapes: real sites, phishing patterns, and links whose destination is genuinely not in the text |
+
 ## Caveats a reviewer should know
 
 - **B5 rows in `axis_t.csv` / `axis_s.csv` carry no bootstrap CIs** (`NaN` in
@@ -144,11 +150,18 @@ honestly rather than presenting only the final version.
   retained. The point estimates are the originals; only the interval is absent.
 - **Feature-set divergence.** Every experiment here used the 33 features pinned
   in `lexical.PAPER_P1_FEATURES`. The interactive demo model
-  (`data/processed/demo_model/`) uses 34 — `num_brand_tokens_fuzzy` was added
+  (`data/processed/demo_model/`) uses 36 — `num_brand_tokens_fuzzy`, then
+  `num_brand_tokens_extended` and `num_suspicious_tokens_extended`, each added
   afterwards in response to a live-tested false negative. The original 33 keep
-  identical semantics, but a rerun using all 34 will not reproduce these numbers
+  identical semantics, but a rerun using all 36 will not reproduce these numbers
   exactly. `data/processed/demo_model/meta.json` records this under
   `paper_feature_divergence`.
+- **The demo is not a paper result.** `demo_stress_test.csv` and everything
+  under `data/processed/demo_model/` (including the Layer-0 trusted-domain,
+  untrusted-host and tenant lists) belong to the interactive demo only. The
+  demo answers with a trusted-domain lookup ahead of the classifier, which is
+  deliberately *not* something the benchmarked baselines are allowed to do: no
+  number in the paper comes from a list of known-good domains.
 - **Single seed.** Results are from one training seed; variance across seeds is
   not characterised. This is stated as a limitation in the paper rather than
   papered over.

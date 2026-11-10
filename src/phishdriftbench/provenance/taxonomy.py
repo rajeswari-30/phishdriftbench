@@ -206,3 +206,102 @@ class LiveLookupClient:
         except Exception as e:
             return {"ssl_present": 0, "ssl_not_before": None, "ssl_certificate_age_days": None,
                     "ssl_error": str(e)[:100]}
+
+    # ------------------------------------------------------------------
+    # Demo-only detail variants.
+    #
+    # `dns_lookup` and `ssl_lookup` above are the versions every C3 experiment
+    # ran against; their return keys feed results/p2_lookups.csv and are kept
+    # byte-identical so that audit stays reproducible. The two methods below
+    # return the same underlying facts in richer form -- actual addresses
+    # rather than counts, full certificate identity rather than just an age --
+    # for display in the interactive demo. Nothing here is a model feature:
+    # P2_FEATURES is unchanged, so the provenance ablation is untouched.
+    # ------------------------------------------------------------------
+
+    def dns_lookup_detail(self, domain: str, *,
+                           i_understand_this_contacts_external_infrastructure: bool = False) -> dict:
+        """A-record addresses and nameservers, not just how many there are."""
+        if not i_understand_this_contacts_external_infrastructure:
+            raise RuntimeError("Set the confirmation flag to perform a live DNS lookup.")
+        self._throttle()
+        import dns.resolver
+
+        out = {"dns_success": 0, "ip_addresses": [], "nameservers": [], "mx_present": 0}
+        try:
+            answers = dns.resolver.resolve(domain, "A", lifetime=self.timeout_s)
+            out["ip_addresses"] = [r.address for r in answers]
+            out["dns_success"] = int(bool(out["ip_addresses"]))
+        except Exception as e:
+            out["dns_error"] = str(e)[:120]
+        try:
+            answers = dns.resolver.resolve(domain, "NS", lifetime=self.timeout_s)
+            out["nameservers"] = [str(r.target).rstrip(".") for r in answers]
+        except Exception:
+            pass
+        try:
+            out["mx_present"] = int(bool(dns.resolver.resolve(domain, "MX", lifetime=self.timeout_s)))
+        except Exception:
+            pass
+        return out
+
+    def ssl_lookup_detail(self, domain: str, *,
+                           i_understand_this_contacts_external_infrastructure: bool = False) -> dict:
+        """Certificate identity: issuer, subject, validity window, and the
+        Subject Alternative Names the certificate actually covers. Still a
+        TLS handshake only -- no HTTP request, no page content."""
+        if not i_understand_this_contacts_external_infrastructure:
+            raise RuntimeError("Set the confirmation flag to perform a live SSL/TLS lookup.")
+        self._throttle()
+        import socket
+        import ssl as ssl_module
+
+        ctx = ssl_module.create_default_context()
+        ctx.check_hostname = False
+        ctx.verify_mode = ssl_module.CERT_NONE
+        try:
+            with socket.create_connection((domain, 443), timeout=self.timeout_s) as sock:
+                with ctx.wrap_socket(sock, server_hostname=domain) as tls:
+                    der_cert = tls.getpeercert(binary_form=True)
+
+            import pandas as pd
+            from cryptography import x509
+            from cryptography.x509.oid import ExtensionOID, NameOID
+
+            cert = x509.load_der_x509_certificate(der_cert)
+
+            def _name_part(name, oid):
+                attrs = name.get_attributes_for_oid(oid)
+                return attrs[0].value if attrs else None
+
+            not_before = getattr(cert, "not_valid_before_utc", None) or cert.not_valid_before
+            not_after = getattr(cert, "not_valid_after_utc", None) or cert.not_valid_after
+            nb_ts = pd.Timestamp(not_before)
+            if nb_ts.tzinfo is None:
+                nb_ts = nb_ts.tz_localize("UTC")
+            na_ts = pd.Timestamp(not_after)
+            if na_ts.tzinfo is None:
+                na_ts = na_ts.tz_localize("UTC")
+            now = pd.Timestamp.now(tz="UTC")
+
+            try:
+                ext = cert.extensions.get_extension_for_oid(ExtensionOID.SUBJECT_ALTERNATIVE_NAME)
+                sans = ext.value.get_values_for_type(x509.DNSName)
+            except Exception:
+                sans = []
+
+            return {
+                "ssl_present": 1,
+                "issuer_org": _name_part(cert.issuer, NameOID.ORGANIZATION_NAME),
+                "issuer_cn": _name_part(cert.issuer, NameOID.COMMON_NAME),
+                "subject_cn": _name_part(cert.subject, NameOID.COMMON_NAME),
+                "not_before": str(nb_ts.date()),
+                "not_after": str(na_ts.date()),
+                "certificate_age_days": (now - nb_ts).days,
+                "days_until_expiry": (na_ts - now).days,
+                "is_expired": int(na_ts < now),
+                "subject_alt_names": sans,
+                "san_count": len(sans),
+            }
+        except Exception as e:
+            return {"ssl_present": 0, "ssl_error": str(e)[:120]}

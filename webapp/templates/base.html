@@ -1,0 +1,170 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<title>{% block title %}PhishLens{% endblock %}</title>
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<meta name="description" content="PhishLens checks whether a link looks like phishing by reading only the URL text. It never opens the page.">
+<link rel="icon" href="data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 32 32'%3E%3Ccircle cx='14' cy='14' r='9.25' fill='none' stroke='%23111110' stroke-width='2.6'/%3E%3Cpath d='M20.9 20.9 L27.5 27.5' stroke='%23111110' stroke-width='3.2' stroke-linecap='round'/%3E%3Cpath d='M10.1 14.35 L12.85 17.1 L18 11.1' fill='none' stroke='%23111110' stroke-width='2.4' stroke-linecap='round' stroke-linejoin='round'/%3E%3C/svg%3E">
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link href="https://fonts.googleapis.com/css2?family=Geist:wght@400;500;600&family=Geist+Mono:wght@400;500&display=swap" rel="stylesheet">
+<style>
+  :root{
+    --paper:#fafaf9; --paper-2:#f3f3f1;
+    --ink:#111110; --ink-2:#3d3d3a; --muted:#6f6e69; --faint:#a3a29c;
+    --rule:#e7e6e2; --rule-2:#d9d8d3;
+    --phish:#c2372b; --phish-soft:#fdf1ef;
+    --legit:#1d7d3f; --legit-soft:#eff8f1;
+    --unsure:#94670d; --unsure-soft:#fcf6e8;
+    --sans:"Geist", Inter, ui-sans-serif, -apple-system, "Segoe UI", system-ui, sans-serif;
+    --mono:"Geist Mono", ui-monospace, "SFMono-Regular", Menlo, Consolas, monospace;
+    /* Strong ease-out for anything entering; it starts fast, so the UI feels
+       like it responded immediately rather than wound up first. */
+    --ease-out:cubic-bezier(0.23, 1, 0.32, 1);
+    --maxw:1400px;
+
+    /* Aliases kept so the inner pages' older rules resolve in the new system. */
+    --line:var(--rule); --line-soft:var(--rule); --surface:transparent; --surface-2:var(--paper-2);
+    --phish-fg:var(--phish); --legit-fg:var(--legit); --unsure-fg:var(--unsure);
+    --phish-dot:var(--phish); --legit-dot:var(--legit); --unsure-dot:var(--unsure);
+    --r-sm:6px; --r:10px; --r-lg:12px;
+  }
+  *{ box-sizing:border-box; }
+  html{ scroll-behavior:smooth; -webkit-text-size-adjust:100%; }
+  body{
+    margin:0; background:var(--paper); color:var(--ink);
+    font-family:var(--sans); font-size:16px; line-height:1.6;
+    -webkit-font-smoothing:antialiased; text-rendering:optimizeLegibility;
+  }
+  ::selection{ background:var(--ink); color:var(--paper); }
+  a{ color:inherit; }
+  code{ font-family:var(--mono); font-size:.92em; }
+  .wrap{ width:100%; max-width:var(--maxw); margin:0 auto; padding:0 40px; }
+
+  /* ---------- nav ---------- */
+  nav{
+    position:sticky; top:0; z-index:50; border-bottom:1px solid var(--rule);
+    background:rgba(250,250,249,.86);
+    backdrop-filter:saturate(180%) blur(12px); -webkit-backdrop-filter:saturate(180%) blur(12px);
+  }
+  .nav-in{ display:flex; align-items:center; height:60px; gap:32px; }
+  .brand{ display:flex; align-items:center; gap:9px; text-decoration:none; color:var(--ink);
+    font-weight:600; font-size:15px; letter-spacing:-.01em; }
+  .nav-links{ margin-left:auto; display:flex; align-items:center; gap:28px; }
+  .nav-links a{ text-decoration:none; color:var(--muted); font-size:14px; transition:color 150ms ease; }
+  .nav-links a[aria-current="page"]{ color:var(--ink); }
+  .nav-links .ext{ color:var(--ink); }
+
+  /* ---------- type ---------- */
+  h1{ font-size:clamp(40px, 5.2vw, 64px); line-height:1.02; letter-spacing:-.035em;
+      font-weight:600; margin:0 0 20px; text-wrap:balance; }
+  h2{ font-size:clamp(24px, 2.6vw, 30px); line-height:1.15; letter-spacing:-.02em;
+      font-weight:600; margin:0 0 12px; text-wrap:balance; }
+  h3{ font-size:16px; line-height:1.4; font-weight:600; margin:0 0 6px; letter-spacing:-.01em; }
+  p{ margin:0; }
+  .lede{ font-size:18px; line-height:1.55; color:var(--muted); max-width:34em; margin:0 0 32px;
+         text-wrap:pretty; }
+  .eyebrow{ display:block; font-family:var(--mono); font-size:12.5px; color:var(--muted);
+            margin-bottom:20px; }
+  .muted{ color:var(--muted); }
+  .small{ font-size:14px; line-height:1.55; }
+
+  /* ---------- layout ---------- */
+  .page-head{ padding-top:96px; padding-bottom:56px; }
+  section.band{ padding:0 0 96px; }
+  .sec-head{ max-width:36em; margin:0 0 32px; }
+  .sec-head p{ color:var(--muted); font-size:16px; line-height:1.6; }
+
+  /* Editorial blocks, not cards: a single rule on top, no box, no shadow. */
+  .card{ border-top:1px solid var(--ink); padding-top:18px; }
+  .grid-3{ display:grid; grid-template-columns:repeat(3, 1fr); gap:40px; }
+  .grid-2{ display:grid; grid-template-columns:repeat(2, 1fr); gap:40px 48px; }
+  .note{ border-left:2px solid var(--rule-2); padding:2px 0 2px 16px; color:var(--muted);
+         font-size:14px; line-height:1.6; max-width:46em; }
+  .note b{ color:var(--ink); font-weight:500; }
+
+  /* ---------- buttons ---------- */
+  .btn{
+    display:inline-flex; align-items:center; justify-content:center; gap:8px;
+    height:40px; padding:0 16px; border-radius:10px; border:1px solid var(--ink);
+    background:var(--ink); color:var(--paper); font:500 14px/1 var(--sans);
+    text-decoration:none; cursor:pointer; white-space:nowrap;
+    transition:transform 120ms var(--ease-out), background-color 150ms ease, border-color 150ms ease;
+  }
+  .btn:active{ transform:scale(.97); }
+  .btn.ghost{ background:transparent; color:var(--ink); border-color:var(--rule-2); }
+  :focus-visible{ outline:2px solid var(--ink); outline-offset:2px; }
+
+  /* Hover only where a real pointer exists, so touch taps don't leave
+     elements stuck in their hover state. */
+  @media (hover:hover) and (pointer:fine){
+    .nav-links a:hover{ color:var(--ink); }
+    .btn:hover{ background:#2b2b29; border-color:#2b2b29; }
+    .btn.ghost:hover{ background:var(--paper-2); border-color:var(--rule-2); }
+  }
+
+  /* ---------- footer ---------- */
+  footer{ border-top:1px solid var(--rule); padding:36px 0 44px; margin-top:24px; }
+  .foot-in{ display:flex; gap:24px; align-items:center; flex-wrap:wrap; font-size:14px; color:var(--muted); }
+  .foot-links{ margin-left:auto; display:flex; gap:24px; }
+  .foot-links a{ color:var(--muted); text-decoration:none; transition:color 150ms ease; }
+  @media (hover:hover) and (pointer:fine){ .foot-links a:hover{ color:var(--ink); } }
+
+  @media (prefers-reduced-motion: reduce){ html{ scroll-behavior:auto; } }
+  @media (max-width:880px){
+    .wrap{ padding:0 24px; }
+    .grid-3, .grid-2{ grid-template-columns:1fr; gap:32px; }
+    .page-head{ padding-top:56px; padding-bottom:36px; }
+    section.band{ padding:0 0 64px; }
+    .foot-links{ margin-left:0; }
+  }
+  @media (max-width:640px){
+    .wrap{ padding:0 20px; }
+    .nav-in{ gap:16px; }
+    .nav-links{ gap:18px; overflow-x:auto; scrollbar-width:none; }
+    .nav-links::-webkit-scrollbar{ display:none; }
+    .nav-links a{ white-space:nowrap; font-size:13px; flex-shrink:0; }
+    .nav-links .ext{ display:none; }
+  }
+  {% block style %}{% endblock %}
+</style>
+</head>
+<body>
+
+<nav>
+  <div class="wrap nav-in">
+    <a class="brand" href="/">
+      <svg width="20" height="20" viewBox="0 0 32 32" fill="none" aria-hidden="true">
+        <circle cx="14" cy="14" r="9.25" stroke="#111110" stroke-width="2.4"/>
+        <path d="M20.9 20.9 L27.5 27.5" stroke="#111110" stroke-width="2.9" stroke-linecap="round"/>
+        <path d="M10.1 14.35 L12.85 17.1 L18.0 11.1" stroke="#111110" stroke-width="2.2"
+              stroke-linecap="round" stroke-linejoin="round"/>
+      </svg>
+      PhishLens
+    </a>
+    <div class="nav-links">
+      <a href="/#how">How it works</a>
+      <a href="/results"  {% if page=='results' %}aria-current="page"{% endif %}>Results</a>
+      <a href="/testing"  {% if page=='testing' %}aria-current="page"{% endif %}>Testing</a>
+      <a href="/about"    {% if page=='about' %}aria-current="page"{% endif %}>About</a>
+      <a class="ext" href="https://github.com/rajeswari-30/phishdriftbench" target="_blank" rel="noopener noreferrer">GitHub &#8599;</a>
+    </div>
+  </div>
+</nav>
+
+{% block content %}{% endblock %}
+
+<footer>
+  <div class="wrap foot-in">
+    <span><b style="color:var(--ink);font-weight:600">PhishLens</b>&nbsp;&nbsp;Reads the URL text only. No page is ever fetched.</span>
+    <div class="foot-links">
+      <a href="https://github.com/rajeswari-30/phishdriftbench" target="_blank" rel="noopener noreferrer">Source code</a>
+      <a href="https://github.com/rajeswari-30/phishdriftbench/tree/main/results" target="_blank" rel="noopener noreferrer">Result data</a>
+      <a href="https://github.com/rajeswari-30/phishdriftbench/blob/main/results/README.md" target="_blank" rel="noopener noreferrer">Manifest</a>
+    </div>
+  </div>
+</footer>
+{% block script %}{% endblock %}
+</body>
+</html>

@@ -1,0 +1,88 @@
+{% extends "base.html" %}
+{% block title %}Testing: PhishLens{% endblock %}
+
+{% block style %}
+  .axis{ display:flex; gap:20px; align-items:flex-start; }
+  .axis .delta{ flex-shrink:0; font-size:22px; font-weight:600; letter-spacing:-.5px; min-width:80px; }
+  .axis .delta small{ display:block; font-size:11px; font-weight:500; letter-spacing:.4px;
+    text-transform:uppercase; color:var(--muted); margin-top:4px; }
+  .axis.bad .delta{ color:var(--phish-fg); }
+  .axis.ok .delta{ color:var(--legit-fg); }
+  .axis p{ color:var(--muted); font-size:14px; line-height:22px; }
+
+  .lw{ display:grid; grid-template-columns:repeat(3,1fr); gap:40px; }
+  .lw div{ border-top:1px solid var(--ink); padding-top:18px; }
+  
+  .lw b{ display:block; font-size:30px; font-weight:600; letter-spacing:-.75px; line-height:1.1; }
+  .lw span{ display:block; margin-top:10px; font-weight:500; font-size:14px; }
+  .lw em{ display:block; margin-top:4px; color:var(--muted); font-size:13px; font-style:normal; line-height:20px; }
+
+  @media (max-width:880px){
+    .lw{ grid-template-columns:1fr; }
+    .lw div{ padding-bottom:4px; }
+    
+    .axis{ flex-direction:column; gap:10px; }
+  }
+{% endblock %}
+
+{% block content %}
+<div class="wrap page-head">
+  <span class="eyebrow">Protocol</span>
+  <h1>How it was tested.</h1>
+  <p class="lede">Four axes that published evaluations routinely skip, plus what the model actually
+     costs to run.</p>
+</div>
+
+<section class="band">
+  <div class="wrap">
+    <div class="sec-head">
+      <h2>Tested four ways.</h2>
+      <p>Across eight recent detection papers, temporal testing, prevalence corrected reporting and
+         evasion testing were each performed by zero of them.</p>
+    </div>
+    <div class="grid-2">
+      <div class="card axis ok">
+        <div class="delta">&minus;0.4<small>AUC pts</small></div>
+        <div><h3>Time</h3>
+          <p>Trained on older URLs, tested 12 months later. Barely moved. A null result, reported as one.</p></div>
+      </div>
+      <div class="card axis bad">
+        <div class="delta">&minus;23.3<small>AUC pts</small></div>
+        <div><h3>Source</h3>
+          <p>Train on one dataset, test on another. The worst baseline fell from 0.997 to 0.764.</p></div>
+      </div>
+      <div class="card axis bad">
+        <div class="delta">&minus;5.4<small>recall pts</small></div>
+        <div><h3>Evasion</h3>
+          <p>Simple tricks backfired. AI generated phishing degraded every model tested.</p></div>
+      </div>
+      <div class="card axis bad">
+        <div class="delta">5.9%<small>precision left</small></div>
+        <div><h3>Rarity</h3>
+          <p>The one that matters most, and the one the Results page measures.</p></div>
+      </div>
+    </div>
+  </div>
+</section>
+
+<section class="band">
+  <div class="wrap">
+    <div class="sec-head">
+      <h2>Lightweight, measured.</h2>
+      <p>Lightweight is in the name, so it should be a number rather than an adjective.</p>
+    </div>
+    <div class="lw">
+      <div><b>18 &micro;s</b><span>Per URL</span>
+        <em>Extraction plus scoring. Fast enough to sit inline in a mail gateway.</em></div>
+      <div><b>0.71 MB</b><span>Model on disk</span>
+        <em>Small enough to ship inside a browser extension.</em></div>
+      <div><b>372&times;</b><span>Smaller than BERT</span>
+        <em>The transformer alternative weighs 265 MB for comparable accuracy.</em></div>
+    </div>
+    <p class="note" style="margin-top:20px">
+      One caveat. Under sustained evasion attack throughput falls from roughly <b>573 to 293 URLs
+      per second</b>, because more traffic gets escalated for a second look.
+    </p>
+  </div>
+</section>
+{% endblock %}

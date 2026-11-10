@@ -85,6 +85,15 @@ it and write CSVs to `results/`. Each subpackage:
   each baseline's fit+predict in its own subprocess (see constraint below).
 - **`demo/model.py`** — a separate, ordinary train-once/save/load model for the interactive CLI
   and web demo. Deliberately *not* one of the paper's B1-B5 baselines.
+- **`demo/trust.py`** — Layer 0 of the demo, ahead of the model: input repair (missing scheme,
+  host case, defanged `hxxps://evil[.]tk`), an offline trusted-domain lookup, and the cases where
+  the text stops (shorteners, redirectors, pages published by strangers). Its three shipped lists
+  are built by `scripts/build_trusted_domains.py` from Tranco plus the phishing corpora; nothing
+  is fetched at inference. Demo-only, like the demo's three extra features: no paper experiment
+  touches it.
+
+`scripts/stress_test_demo.py` is the demo's regression battery of real-world URL shapes, and
+`tests/test_trust.py` pins the Layer-0 behaviour. Run both after changing anything under `demo/`.
 
 ### Critical constraint: process isolation for GBM/DL libraries
 
@@ -110,8 +119,13 @@ without restructuring.
 
 ### Demo model versioning
 
-`scripts/train_demo_v7.py` through `train_demo_v10.py` are successive retraining recipes for the
+`scripts/train_demo_v7.py` through `train_demo_v12.py` are successive retraining recipes for the
 interactive demo model, kept for history rather than deleted — each one fixed a specific measured
-failure in the previous version (see the changelog inside `train_demo_v10.py` and README's mention
-of v8's documented failures). `v10` is current; `data/processed/demo_model*_backup/` holds prior
-versions.
+failure in the previous version, named in its docstring (v7 paths, v8 real service URL shapes, v9
+bare typosquats, v10/v11 brand and bait-word coverage, v12 the real-world legitimate URL shapes:
+query strings, opaque identifiers, @handles, plain http). `v12` is current;
+`data/processed/demo_model*_backup/` holds prior versions.
+
+Each recipe's generator changes live in `demo/model.py`, so running an older recipe today does not
+reproduce that older model — the scripts are a changelog of what was fixed and why, not pinned
+snapshots.

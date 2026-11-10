@@ -1,0 +1,124 @@
+{% extends "base.html" %}
+{% block title %}About: PhishLens{% endblock %}
+
+{% block style %}
+  .contrib .k{ font-size:12px; text-transform:uppercase; letter-spacing:.4px; color:var(--muted);
+    font-weight:500; margin-bottom:12px; }
+  .contrib p{ color:var(--muted); font-size:14px; line-height:22px; }
+  .limits{ max-width:640px; }
+  .limits li{
+    display:flex; gap:12px; align-items:flex-start; padding:14px 0;
+    border-bottom:1px solid var(--line-soft); font-size:14px; line-height:22px;
+  }
+  .limits ul{ margin:0; padding:0; list-style:none; }
+  .limits li:last-child{ border-bottom:none; padding-bottom:0; }
+  .limits li:first-child{ padding-top:0; }
+  .limits .x{
+    flex-shrink:0; width:6px; height:6px; border-radius:50%; background:var(--phish-dot);
+    margin-top:8px;
+  }
+  .limits b{ font-weight:500; }
+  .limits span{ color:var(--muted); }
+  .faq{ max-width:640px; }
+  details{ border-bottom:1px solid var(--line-soft); }
+  details:first-of-type{ border-top:1px solid var(--line-soft); }
+  summary{
+    cursor:pointer; list-style:none; padding:18px 2px; font-weight:500; font-size:15px;
+    display:flex; align-items:center; gap:14px;
+  }
+  summary::-webkit-details-marker{ display:none; }
+  summary::before{ content:'+'; color:var(--muted); font-size:16px; line-height:1; }
+  details[open] summary::before{ content:'\2212'; }
+  .ans{ padding:0 2px 18px 30px; color:var(--muted); font-size:14px; line-height:24px; }
+  .ans code{ background:var(--surface-2); border-radius:4px; padding:2px 6px; font-size:13px; }
+  .ans a{ color:var(--ink); }
+{% endblock %}
+
+{% block content %}
+<div class="wrap page-head">
+  <span class="eyebrow">Research</span>
+  <h1>Anyone can build a detector.<br>Knowing whether to trust it is harder.</h1>
+  <p class="lede">PhishLens is the demo. The project underneath is PhishDriftBench, a four axis
+     protocol for measuring what phishing detectors do once they leave the test set.</p>
+</div>
+
+<section class="band">
+  <div class="wrap grid-3">
+    <div class="card contrib">
+      <div class="k">The gap</div>
+      <h3>Scores are measured the easy way</h3>
+      <p>Across eight method papers from 2024 to 2026, none tested over time, at realistic phishing
+         rarity, or against evasion.</p>
+    </div>
+    <div class="card contrib">
+      <div class="k">The finding</div>
+      <h3>99% accuracy can mean 6% precision</h3>
+      <p>Corrected for how rare phishing is, a detector's alerts can be wrong 16 times out of 17
+         without its headline accuracy moving.</p>
+    </div>
+    <div class="card contrib">
+      <div class="k">The response</div>
+      <h3>A model that knows when to stop</h3>
+      <p>Explains each verdict, abstains rather than guessing, and repairs itself using 20 labels
+         rather than thousands.</p>
+    </div>
+  </div>
+</section>
+
+<section class="band">
+  <div class="wrap">
+    <div class="sec-head">
+      <h2>What it cannot do.</h2>
+      <p>Stating this plainly is the point of the project, not a disclaimer bolted onto it.</p>
+    </div>
+    <div class="card limits">
+      <ul>
+        <li><span class="x"></span><div><b>Follow a shortened link.</b>
+          <span>The destination is not in the URL text, so it abstains.</span></div></li>
+        <li><span class="x"></span><div><b>See anything on the page.</b>
+          <span>No HTML, no images, no redirects, by design.</span></div></li>
+        <li><span class="x"></span><div><b>Catch a correctly spelled impersonation.</b>
+          <span><code>paypal-support-team.com</code> is spelled properly. Recognising the intent needs
+          reasoning this model does not do.</span></div></li>
+        <li><span class="x"></span><div><b>Promise these numbers on your traffic.</b>
+          <span>Results come from a single training seed on three public corpora.</span></div></li>
+        <li><span class="x"></span><div><b>Replace a security stack.</b>
+          <span>One cheap signal before the expensive checks, not instead of them.</span></div></li>
+      </ul>
+    </div>
+  </div>
+</section>
+
+<section class="band">
+  <div class="wrap">
+    <div class="sec-head"><h2>Questions.</h2></div>
+    <div class="faq">
+      <details>
+        <summary>Does it visit the website I paste in?</summary>
+        <div class="ans">No. Only the characters of the URL are analysed. Nothing is requested, rendered
+          or stored, which is what makes it safe to paste a suspected phishing link.</div>
+      </details>
+      <details>
+        <summary>How accurate is it, really?</summary>
+        <div class="ans">97.4% on a balanced held out set of 20,000 URLs, and that number is misleading
+          on its own, which is why the <a href="/results">Results</a> page exists. At realistic phishing
+          rates, precision falls to single digits.</div>
+      </details>
+      <details>
+        <summary>Why does it sometimes refuse to answer?</summary>
+        <div class="ans">Because the URL carries too little evidence. Shorteners hide their destination
+          entirely. Abstaining costs 3.6% coverage and nearly halves the error rate on the rest.</div>
+      </details>
+      <details>
+        <summary>Can I run it myself?</summary>
+        <div class="ans">Yes. Code, trained model and all 56 result files are public, with a manifest
+          mapping every number to the script that produced it. Run <code>python webapp/app.py</code>.</div>
+      </details>
+    </div>
+    <p style="margin-top:32px">
+      <a class="btn" href="https://github.com/rajeswari-30/phishdriftbench" target="_blank" rel="noopener noreferrer">View the source</a>
+      <a class="btn ghost" href="/" style="margin-left:8px">Check a URL</a>
+    </p>
+  </div>
+</section>
+{% endblock %}

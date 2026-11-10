@@ -22,9 +22,18 @@ import numpy as np
 import pandas as pd
 import xgboost as xgb
 
+from phishdriftbench.demo import trust
 from phishdriftbench.features import lexical
 
 FEATURE_COLS = lexical.LexicalFeatures.field_names()
+
+# Measured leak rate of the Layer-0 trusted-domain list against the acquired
+# phishing corpora (scripts/build_trusted_domains.py writes the current figure
+# to trusted_domains.json): 0.245% of known phishing sits on a domain the list
+# still trusts, scattered two and three at a time across compromised real
+# sites. A verdict decided by that layer is reported at the matching
+# confidence rather than at 100%, which the list has not earned.
+TRUSTED_CONFIDENCE = 0.9975
 
 FEATURE_DESCRIPTIONS = {
     "url_length": "overall URL length",
@@ -56,6 +65,10 @@ FEATURE_DESCRIPTIONS = {
     "num_suspicious_tokens": "number of suspicious words found (e.g. 'login', 'verify', 'secure')",
     "num_brand_tokens": "number of known brand names found in the URL",
     "num_brand_tokens_fuzzy": "number of URL labels that closely misspell a known brand name (e.g. 'goog2e')",
+    "num_brand_tokens_extended": "number of URL labels that exactly match a brand from an extended, wider list "
+                                   "(e.g. Oracle, LinkedIn, Reserve Bank of India, HDFC)",
+    "num_suspicious_tokens_extended": "number of suspicious words from an extended list (e.g. 'refund', 'kyc', "
+                                        "'otp', 'cashback')",
     "brand_in_subdomain": "a brand name appears in the subdomain position (classic brand-jacking)",
     "tld_length": "length of the top-level domain (e.g. '.com' = 3)",
     "tld_is_common": "uses a common top-level domain (.com/.org/.net/etc.)",
@@ -126,21 +139,83 @@ _DEPTH_WEIGHTS = np.array([0.34, 0.30, 0.19, 0.09, 0.05, 0.02, 0.01])   # depths
 _ALNUM = "abcdefghijklmnopqrstuvwxyz0123456789"
 
 
+# v12. Three shapes that every real site uses and that NO legitimate training
+# URL had, because Tranco and PhiUSIIL store bare domains and the generator
+# above only ever emitted word-like path segments:
+#
+#   * opaque identifiers  - a Drive file id, a commit hash, a tweet's 19
+#                            digits, a UUID in a REST path
+#   * query strings        - utm tags, a session id, a search term, a
+#                            percent-encoded redirect target
+#   * @handles and locales - /@author/post-slug, /en-gb/support/...
+#
+# Phishing URLs in the corpora have all three, so the model read each of them
+# as evidence of phishing. Measured before this change: 56.8% of 1,500 real
+# long-tail domains wearing these shapes were called PHISHING. The shapes are
+# not phishing signals; their absence from the legitimate class was a
+# property of how the corpora were collected.
+_B62 = "abcdefghijklmnopqrstuvwxyzABCDEFGHIJKLMNOPQRSTUVWXYZ0123456789"
+_HEX = "0123456789abcdef"
+_LOCALES = ["en", "en-gb", "en-us", "de", "fr", "es", "pt-br", "ja", "hi", "zh-cn"]
+_QUERY_KEYS = ["utm_source", "utm_medium", "utm_campaign", "ref", "q", "page", "id",
+               "lang", "sort", "filter", "variant", "session_id", "token", "v",
+               "gclid", "fbclid", "redirect", "returnUrl", "tab", "category"]
+_QUERY_WORDS = ["newsletter", "google", "facebook", "email", "homepage", "summer-sale",
+                 "blue+shirt", "laptop+stand", "price", "newest", "1", "2", "42"]
+
+
+def _opaque_token(rng: np.random.Generator) -> str:
+    """One identifier in the shapes real services mint them."""
+    k = rng.random()
+    if k < 0.35:
+        return "".join(rng.choice(list(_B62), size=int(rng.integers(8, 45))))
+    if k < 0.60:
+        return "".join(rng.choice(list(_HEX), size=int(rng.choice([32, 40, 12, 24]))))
+    if k < 0.80:
+        return str(rng.integers(10 ** 14, 10 ** 18))
+    return "-".join("".join(rng.choice(list(_HEX), size=n)) for n in (8, 4, 4, 4, 12))
+
+
+def _query_string(rng: np.random.Generator) -> str:
+    """A query string with the parameter names real sites actually use."""
+    n = int(rng.choice([1, 2, 3, 4, 5], p=[0.34, 0.28, 0.18, 0.12, 0.08]))
+    keys = rng.choice(_QUERY_KEYS, size=n, replace=False)
+    parts = []
+    for key in keys:
+        r = rng.random()
+        if r < 0.45:
+            value = str(rng.choice(_QUERY_WORDS))
+        elif r < 0.75:
+            value = _opaque_token(rng)
+        elif r < 0.88:
+            value = str(rng.integers(1, 999_999))
+        else:
+            value = "%2F" + "%2F".join(rng.choice(_SHORT_WORDS, size=int(rng.integers(1, 3))))
+        parts.append(f"{key}={value}")
+    return "?" + "&".join(parts)
+
+
 def _path_segment(rng: np.random.Generator) -> str:
     """One path segment, drawn across the shapes real sites actually use."""
     k = rng.random()
-    if k < 0.34:
+    if k < 0.30:
         return _SHORT_WORDS[rng.integers(len(_SHORT_WORDS))]
-    if k < 0.54:
+    if k < 0.48:
         return "-".join(rng.choice(_WORDS, size=rng.integers(1, 3), replace=False))
-    if k < 0.68:
+    if k < 0.60:
         return "".join(_ALNUM[i] for i in rng.integers(0, 36, size=rng.integers(4, 12)))
-    if k < 0.79:
+    if k < 0.70:
         return str(rng.integers(1, 999_999))
-    if k < 0.87:
+    if k < 0.77:
         return "abcdefghijklmnopqrstuvwxyz"[rng.integers(26)]
-    if k < 0.94:
+    if k < 0.83:
         return f"user{rng.integers(1, 99999)}"
+    if k < 0.90:                                    # v12: opaque identifiers
+        return _opaque_token(rng)
+    if k < 0.94:                                    # v12: @handles
+        return "@" + str(rng.choice(["editor", "anna", "dev-team", "news", "support"]))
+    if k < 0.97:                                    # v12: locale segments
+        return str(rng.choice(_LOCALES))
     return "_".join(w.capitalize() for w in rng.choice(_WORDS, size=rng.integers(1, 3), replace=False))
 
 
@@ -149,23 +224,37 @@ def _random_path(rng: np.random.Generator) -> str:
     path = "/" + "/".join(_path_segment(rng) for _ in range(depth))
     if rng.random() < 0.10:
         path += "." + ["html", "php", "aspx", "htm", "jsp"][rng.integers(5)]
-    if rng.random() < 0.10:
-        path += f"?{rng.choice(['q', 'id', 'ref', 'page', 'lang'])}=" \
-                f"{'+'.join(rng.choice(_WORDS, size=rng.integers(1, 3), replace=False))}"
-    if rng.random() < 0.06:
+    # v12: a quarter of real inbound links carry a query string, and a
+    # fragment is common on documentation and single-page apps.
+    if rng.random() < 0.26:
+        path += _query_string(rng)
+    elif rng.random() < 0.06:
         path += "/"
+    if rng.random() < 0.07:
+        path += "#" + str(rng.choice(["summary", "top", "section-2", "gid=0", "overview"]))
     return path
 
 
-def augment_legit_with_paths(urls: list[str], rng: np.random.Generator, frac: float = 0.65) -> list[str]:
+def augment_legit_with_paths(urls: list[str], rng: np.random.Generator, frac: float = 0.65,
+                              http_frac: float = 0.15) -> list[str]:
     """Append a realistic sub-page path to `frac` of bare-domain legitimate
-    URLs; the rest stay as homepages (also realistic)."""
+    URLs; the rest stay as homepages (also realistic).
+
+    v12 also serves `http_frac` of them over plain http. Both legitimate
+    sources build their URLs by prefixing "https://" to a bare domain, so
+    NO legitimate training URL was ever http, while much of PhishTank is.
+    The model duly read the scheme as close to decisive: http://example.com
+    scored 0.9997. Plain-http links to real sites are ordinary (old pages,
+    copied links, redirects), so the absence was an artifact of the loaders,
+    not a fact about the web. http stays a mild phishing signal afterwards,
+    which is correct; it stops being a verdict on its own."""
     out = []
     for u in urls:
         if rng.random() < frac:
-            out.append(u.rstrip("/") + _random_path(rng))
-        else:
-            out.append(u)
+            u = u.rstrip("/") + _random_path(rng)
+        if rng.random() < http_frac:
+            u = u.replace("https://", "http://", 1)
+        out.append(u)
     return out
 
 
@@ -286,6 +375,14 @@ _SQUAT_BRAND_DOMAINS = [
     "google.com", "paypal.com", "amazon.com", "apple.com", "microsoft.com",
     "facebook.com", "netflix.com", "instagram.com", "outlook.com", "dropbox.com",
     "chase.com", "wellsfargo.com", "bankofamerica.com", "linkedin.com", "adobe.com",
+    # Indian institutions -- added after a live test on a fake "Reserve Bank"
+    # URL found this whole category absent: rbi-refund.com and
+    # reservebank-india-refund.com both scored 0 brand evidence. Real
+    # official domains, so `_brand_legit_anchors` below also anchors these
+    # (same reasoning as the original 15: without a legitimate counterweight,
+    # squatting the brand teaches the model to distrust the brand ITSELF).
+    "rbi.org.in", "sbi.co.in", "hdfcbank.com", "icicibank.com", "paytm.com",
+    "phonepe.com", "irctc.co.in", "uidai.gov.in",
 ]
 _SQUAT_CHAR_SWAPS = {"o": "0", "l": "1", "e": "3", "a": "4", "i": "1", "s": "5", "m": "rn"}
 # Only genuinely suspicious TLDs. An earlier version included "co"/"net"/"org",
@@ -295,7 +392,12 @@ _SQUAT_CHAR_SWAPS = {"o": "0", "l": "1", "e": "3", "a": "4", "i": "1", "s": "5",
 # only a handful of bare legitimate examples, that regressed the real domains
 # themselves: paypal.com scored 0.446 (PHISHING) and google.com abstained.
 _SQUAT_TLDS = ["xyz", "tk", "top", "online", "site", "info", "click", "live"]
-_SQUAT_BAIT = ["secure", "login", "verify", "account", "signin", "update", "support", "billing"]
+# Bait words mixed English + the Indian-context additions
+# (refund/kyc/otp/cashback) that motivated `_SUSPICIOUS_TOKENS_EXTENDED` in
+# features/lexical.py, so synthetic training examples actually exercise the
+# combination the live failure exposed (brand + region-specific bait word).
+_SQUAT_BAIT = ["secure", "login", "verify", "account", "signin", "update", "support", "billing",
+               "refund", "kyc", "otp", "cashback", "suspended", "reward"]
 
 # Counterweight to the typosquats above: the REAL brand domains, as bare
 # hostnames and with real path shapes. Without these in comparable volume the
@@ -476,12 +578,17 @@ def load(save_dir: Path = MODEL_DIR) -> DemoModel:
 def _squatting_reasons(feat_row: pd.Series) -> list[str]:
     reasons = []
     if feat_row.get("brand_in_subdomain", 0):
-        reasons.append("a brand name appears in the subdomain position — a classic brand-jacking pattern")
+        reasons.append("a brand name appears in the subdomain position, a classic brand-jacking pattern")
     if feat_row.get("num_brand_tokens", 0) > 0:
         n = int(feat_row["num_brand_tokens"])
         reasons.append(f"contains {n} known brand-name token{'s' if n != 1 else ''} in the URL")
     if feat_row.get("num_brand_tokens_fuzzy", 0) > 0:
-        reasons.append("a URL label closely misspells a known brand name — a possible typosquat")
+        reasons.append("a URL label closely misspells a known brand name, a possible typosquat")
+    if feat_row.get("num_brand_tokens_extended", 0) > 0:
+        reasons.append("contains a brand name from an extended list (banks, government portals, "
+                        "regional services)")
+    if feat_row.get("num_suspicious_tokens_extended", 0) > 0:
+        reasons.append("contains a suspicious bait word (e.g. 'refund', 'KYC', 'OTP')")
     if feat_row.get("is_shortener", 0):
         reasons.append("uses a known URL-shortening service, which can hide the real destination")
     if feat_row.get("num_hyphens", 0) >= 3:
@@ -489,10 +596,52 @@ def _squatting_reasons(feat_row: pd.Series) -> list[str]:
     return reasons
 
 
+def normalize_for_scoring(url: str) -> str:
+    """Repair what a person pasted into the URL they meant, then strip a bare
+    trailing slash on the ROOT path before scoring.
+
+    The repairs live in `demo/trust.py` (missing scheme, host case,
+    defanging, surrounding junk); this wrapper keeps the original name and
+    the never-raises contract for callers that pass known-good URLs.
+
+    Why the root slash matters:
+
+    `https://amazon.com/` and `https://amazon.com` are the same URL, but the
+    training corpora encode the difference as a near-perfect phishing signal,
+    purely as an artifact of how each source stores its data: Tranco lists
+    legitimate domains bare (`google.com`), and `augment_legit_with_paths`
+    rstrips before appending, so no legitimate example ever has a path of
+    exactly "/" -- while 32% of PhishTank's phishing URLs end in one. The
+    model duly learned "path == /" => phishing, which flipped every major
+    real domain to PHISHING at ~97% confidence the moment a user pasted the
+    form their browser actually displays:
+
+        https://amazon.com   -> LEGITIMATE (0.037)
+        https://amazon.com/  -> PHISHING   (0.973)
+
+    This is the same class of corpus artifact as the "has a path =>
+    phishing" problem documented on `_PATH_TEMPLATES` above. Deeper paths are
+    NOT affected (bbc.co.uk/news/ scores 0.045) because `_random_path`
+    already emits trailing slashes on 6% of generated legitimate paths, so
+    only the root case is corrected here rather than rewriting every URL.
+
+    Applied at the demo's input boundary, so the paper's frozen P1 feature
+    semantics are untouched."""
+    try:
+        return trust.normalize_input(url)
+    except (trust.BadURL, ValueError):
+        return url
+
+
 def predict_and_explain(url: str, model: DemoModel, top_k: int = 5) -> dict:
     """Returns a dict with the verdict, confidence, and plain-English
-    reasons — combining the rule-based squatting screen (Layer 1) with
-    XGBoost's per-prediction feature contributions (Layer 2)."""
+    reasons — combining what the URL text states outright (Layer 0,
+    demo/trust.py), the rule-based squatting screen (Layer 1) and XGBoost's
+    per-prediction feature contributions (Layer 2).
+
+    Raises `trust.BadURL` if the input cannot be read as an http(s) URL at
+    all, so callers can say so plainly instead of scoring nonsense."""
+    url = trust.normalize_input(url)
     feats = lexical.extract(url)
     feat_row = pd.Series(feats.__dict__)
     X = feat_row[model.feature_cols].to_frame().T.astype(float)
@@ -518,8 +667,66 @@ def predict_and_explain(url: str, model: DemoModel, top_k: int = 5) -> dict:
         desc = FEATURE_DESCRIPTIONS.get(name, name)
         top_reasons.append(f"{desc} (value={value:g}) {direction} the phishing score")
 
+    # Every signal actually extracted from THIS url, with the value measured
+    # and how far that value pushed the score. `top_reasons` above is the
+    # 5-item plain-English summary; this is the full, inspectable evidence
+    # behind the verdict -- the same TreeSHAP contributions, unrounded and
+    # unfiltered, so nothing about the decision is hidden behind prose.
+    contrib_by_name = dict(contrib_pairs)
+    signals = []
+    for name in model.feature_cols:
+        value = feat_row[name]
+        contrib = float(contrib_by_name.get(name, 0.0))
+        signals.append({
+            "name": name,
+            "label": FEATURE_DESCRIPTIONS.get(name, name),
+            "value": round(float(value), 4),
+            "contribution": round(contrib, 4),
+            "direction": "phishing" if contrib > 0 else ("legitimate" if contrib < 0 else "neutral"),
+        })
+    signals.sort(key=lambda s: abs(s["contribution"]), reverse=True)
+
     final_score = 1.0 if squat_flagged else ml_score
     verdict = "PHISHING" if final_score >= model.decision_threshold else "LEGITIMATE"
+    decided_by = "squatting screen" if squat_flagged else "model"
+    decision_reason = None
+
+    # ---- Layer 0: what the URL text states outright ------------------------
+    # Runs before the model because it answers a different question. The
+    # model judges what a URL *looks like*; this judges who the domain
+    # belongs to, which is not a matter of shape at all. Real sites serve
+    # URLs shaped exactly like phishing (a Drive file ID, a search query with
+    # five parameters), and no amount of retraining can separate those by
+    # text alone -- see demo/trust.py.
+    signal = trust.assess(url)
+    if signal is not None:
+        if signal.is_safe and squat_flagged and _impersonates_another_brand(url, signal.domain):
+            # The domain is genuine, but the link also name-drops a different
+            # brand alongside bait words. Compromised legitimate sites hosting
+            # a phishing page look exactly like this, so neither answer is
+            # safe to give.
+            verdict, decided_by = "UNCERTAIN", signal.layer_name
+            decision_reason = (f"{signal.domain} is a real domain, but this link also "
+                               f"references another company's name together with words "
+                               f"like 'login' or 'verify'. Legitimate pages on a site "
+                               f"rarely do that, and compromised sites often do")
+        elif signal.is_safe:
+            verdict, decided_by, decision_reason = "LEGITIMATE", signal.layer_name, signal.reason
+            final_score = 1.0 - TRUSTED_CONFIDENCE
+        elif squat_flagged:
+            # "The destination is not in the text" is a reason to abstain only
+            # when the text says nothing else. bit.ly/paypal-verify-account
+            # names a brand and asks you to verify an account, which is
+            # evidence, and rule-based evidence outranks abstention.
+            verdict, decided_by = "PHISHING", "squatting screen"
+            decision_reason = (f"{signal.reason} What the link does say is enough on its own: "
+                               f"it name-drops a brand alongside words like 'verify' or 'login'")
+        else:
+            verdict, decided_by, decision_reason = "UNCERTAIN", signal.layer_name, signal.reason
+        return _result(url, verdict, final_score, squat_score, squat_flagged, feat_row,
+                        ml_score, top_reasons, signals, model,
+                        decided_by=decided_by, decision_reason=decision_reason,
+                        abstain_reason=decision_reason if verdict == "UNCERTAIN" else None)
 
     # ---- abstention (DASH component 4, surfaced in the demo) ---------------
     # Two independent reasons to refuse a binary answer. Neither can override
@@ -536,17 +743,38 @@ def predict_and_explain(url: str, model: DemoModel, top_k: int = 5) -> dict:
             # the model previously called t.ly/abc123 phishing at 98.5% and
             # shorturl.at/xyzAB at 75.7%, on no evidence beyond "short host,
             # opaque token".
-            abstain_reason = ("this is a link-shortening service — the real destination "
+            abstain_reason = ("this is a link-shortening service. The real destination "
                                "cannot be determined from the URL text alone, so no "
                                "confident verdict is possible without following the link")
         elif model.abstain_lo < ml_score < model.abstain_hi:
             abstain_reason = (f"the phishing score ({ml_score*100:.1f}%) falls inside the "
                                f"calibrated uncertainty band "
-                               f"({model.abstain_lo*100:.1f}%–{model.abstain_hi*100:.1f}%), "
+                               f"({model.abstain_lo*100:.1f}% to {model.abstain_hi*100:.1f}%), "
                                f"where this model's error rate is too high to answer confidently")
     if abstain_reason is not None:
         verdict = "UNCERTAIN"
+        decided_by = "abstention band"
 
+    return _result(url, verdict, final_score, squat_score, squat_flagged, feat_row,
+                    ml_score, top_reasons, signals, model,
+                    decided_by=decided_by, decision_reason=decision_reason,
+                    abstain_reason=abstain_reason)
+
+
+def _impersonates_another_brand(url: str, domain: str) -> bool:
+    """True when the URL name-drops a brand that is not the domain's own.
+
+    `paypal.com/signin` mentions PayPal and is served by PayPal, so that is
+    not impersonation; `some-shop.com/paypal/verify` mentions PayPal and is
+    not."""
+    label = domain.split(".")[0]
+    brands = [b.lower() for b in lexical.detected_brands(url)]
+    return bool(brands) and not any(b in label or label in b for b in brands)
+
+
+def _result(url, verdict, final_score, squat_score, squat_flagged, feat_row, ml_score,
+             top_reasons, signals, model, *, decided_by, decision_reason, abstain_reason) -> dict:
+    """One shape for every verdict, whichever layer decided it."""
     return {
         "url": url,
         "verdict": verdict,
@@ -558,6 +786,12 @@ def predict_and_explain(url: str, model: DemoModel, top_k: int = 5) -> dict:
         "top_reasons": top_reasons,
         "abstained": abstain_reason is not None,
         "abstain_reason": abstain_reason,
+        "decided_by": decided_by,
+        "decision_reason": decision_reason,
+        "signals": signals,
+        "brands_referenced": lexical.detected_brands(url),
+        "suspicious_words": lexical.detected_suspicious_words(url),
+        "decision_threshold": model.decision_threshold,
     }
 
 
@@ -597,6 +831,9 @@ def shap_force_plot_png(url: str, model: DemoModel, top_k: int = 5) -> str:
     import matplotlib.pyplot as plt
     import shap
 
+    # Same normalization as predict_and_explain, so the plot explains exactly
+    # the input the verdict was computed from.
+    url = normalize_for_scoring(url)
     feats = lexical.extract(url)
     feat_row = pd.Series(feats.__dict__)
     X = feat_row[model.feature_cols].to_frame().T.astype(float)

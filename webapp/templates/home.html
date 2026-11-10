@@ -1,0 +1,314 @@
+{% extends "base.html" %}
+{% block title %}PhishLens: check a link before you open it{% endblock %}
+
+{% block style %}
+  .hero{ padding:112px 0 80px; }
+  .hero h1{ max-width:11.5em; }
+
+  /* ---- input ---- */
+  .checker{ max-width:680px; }
+  .url-form{ display:flex; gap:10px; }
+  .url-input{
+    flex:1; min-width:0; height:52px; padding:0 18px; border:1px solid var(--rule-2);
+    border-radius:12px; background:#fff; color:var(--ink); font:400 15px/1 var(--mono);
+    outline:none; transition:border-color 150ms ease, box-shadow 150ms ease;
+  }
+  .url-input::placeholder{ color:var(--faint); }
+  .url-input:focus{ border-color:var(--ink); box-shadow:0 0 0 4px rgba(17,17,16,.06); }
+  .url-form .btn{ height:52px; padding:0 24px; border-radius:12px; font-size:15px; }
+  .url-form .btn:disabled{ opacity:.55; cursor:default; }
+  .try{ margin-top:14px; font-size:14px; color:var(--muted); }
+  .try button{
+    background:none; border:0; padding:0; font:inherit; color:var(--ink-2); cursor:pointer;
+    text-decoration:underline; text-decoration-color:var(--rule-2); text-underline-offset:3px;
+    transition:text-decoration-color 150ms ease;
+  }
+  .try .sep{ margin:0 8px; color:var(--faint); }
+
+  /* ---- result: only what you need to act on ---- */
+  #result{ max-width:760px; }
+  #result:not(:empty){ margin-top:44px; }
+  .result{ border-top:1px solid var(--ink); padding-top:24px; }
+  /* Each part settles in quickly, one after another. Only opacity and
+     transform move, and the whole sequence finishes inside 450ms. */
+  .result > *{ animation:rise 280ms var(--ease-out) both; }
+  .result > :nth-child(2){ animation-delay:40ms; }
+  .result > :nth-child(3){ animation-delay:80ms; }
+  .result > :nth-child(4){ animation-delay:120ms; }
+  .result > :nth-child(5){ animation-delay:160ms; }
+  @keyframes rise{ from{ opacity:0; transform:translateY(6px); } }
+  @keyframes fade{ from{ opacity:0; } }
+
+  .res-top{ display:flex; align-items:baseline; justify-content:space-between; gap:16px; flex-wrap:wrap; }
+  .res-verdict{ display:flex; align-items:center; gap:12px; font-size:34px; font-weight:600;
+                letter-spacing:-.025em; line-height:1.1; }
+  .res-verdict .dot{ width:12px; height:12px; border-radius:50%; flex-shrink:0; }
+  .phishing .res-verdict{ color:var(--phish); }   .phishing .dot{ background:var(--phish); }
+  .legitimate .res-verdict{ color:var(--legit); } .legitimate .dot{ background:var(--legit); }
+  .uncertain .res-verdict{ color:var(--unsure); } .uncertain .dot{ background:var(--unsure); }
+  .res-conf{ font-size:15px; color:var(--muted); }
+  .res-conf b{ color:var(--ink); font-weight:600; font-size:22px; letter-spacing:-.015em;
+               font-variant-numeric:tabular-nums; margin-right:4px; }
+  .res-url{ margin-top:10px; font-family:var(--mono); font-size:13.5px; color:var(--muted); word-break:break-all; }
+  .res-note{ margin-top:18px; padding:12px 14px; border-radius:10px; font-size:15px; line-height:1.55; }
+  .phishing .res-note{ background:var(--phish-soft); color:#7a1f16; }
+  .legitimate .res-note{ background:var(--legit-soft); color:#14532b; }
+  .uncertain .res-note{ background:var(--unsure-soft); color:#5e4209; }
+  .res-found{ margin:24px 0 0; display:grid; grid-template-columns:170px 1fr; gap:10px 16px; font-size:15px; }
+  .res-found dt{ color:var(--muted); }
+  .res-found dd{ margin:0; font-family:var(--mono); font-size:14px; }
+  .res-none{ margin-top:24px; font-size:15px; color:var(--muted); }
+  .error{ color:var(--phish); font-size:15px; }
+
+  .res-report{ margin-top:28px; padding-top:18px; border-top:1px solid var(--rule);
+               display:flex; align-items:center; gap:14px; flex-wrap:wrap; }
+  .rr-doc{ position:relative; width:34px; height:42px; flex-shrink:0; border:1px solid var(--rule-2);
+           border-radius:5px; background:#fff; display:flex; align-items:flex-end; justify-content:center;
+           padding-bottom:6px; font:500 8.5px/1 var(--mono); color:var(--muted); letter-spacing:.04em; }
+  .rr-doc::before{ content:""; position:absolute; top:-1px; right:-1px; width:10px; height:10px;
+                   background:linear-gradient(225deg, var(--paper) 50%, var(--rule-2) 50%); border-radius:0 5px 0 0; }
+  .rr-text{ flex:1; min-width:220px; }
+  .rr-text b{ display:block; font:500 13.5px/1.45 var(--mono); word-break:break-all; }
+  .rr-text span{ display:block; font-size:13.5px; line-height:1.5; color:var(--muted); }
+  .rr-actions{ display:flex; gap:8px; }
+  .spin{ width:12px; height:12px; border-radius:50%; border:1.5px solid currentColor;
+         border-right-color:transparent; animation:spin 700ms linear infinite; }
+  @keyframes spin{ to{ transform:rotate(360deg); } }
+
+  /* ---- explanation: ruled rows, label on the left ---- */
+  .row{ display:grid; grid-template-columns:280px 1fr; gap:48px; padding:52px 0; border-top:1px solid var(--rule); }
+  .row:last-of-type{ border-bottom:1px solid var(--rule); }
+  .row-label{ font-family:var(--mono); font-size:12.5px; color:var(--muted); }
+  .row-label b{ display:block; margin-top:6px; font:600 18px/1.3 var(--sans); color:var(--ink); letter-spacing:-.015em; }
+  .row-body{ max-width:760px; }
+  .steps{ list-style:none; margin:0; padding:0; counter-reset:step; }
+  .steps li{ counter-increment:step; display:grid; grid-template-columns:44px 1fr; padding:16px 0; border-bottom:1px solid var(--rule); font-size:16px; }
+  .steps li:first-child{ padding-top:0; }
+  .steps li:last-child{ border-bottom:0; padding-bottom:0; }
+  .steps li::before{ content:counter(step, decimal-leading-zero); font-family:var(--mono); font-size:13px; color:var(--faint); padding-top:3px; }
+  .steps b{ font-weight:600; }
+  .steps span{ color:var(--muted); }
+  .answers{ margin:0; }
+  .answers > div{ display:grid; grid-template-columns:170px 1fr; gap:16px; padding:16px 0; border-bottom:1px solid var(--rule); }
+  .answers > div:first-child{ padding-top:0; }
+  .answers > div:last-child{ border-bottom:0; padding-bottom:0; }
+  .answers dt{ display:flex; align-items:center; gap:10px; font-weight:600; }
+  .answers dt i{ width:8px; height:8px; border-radius:50%; }
+  .answers dd{ margin:0; color:var(--muted); }
+  .prose{ font-size:17px; line-height:1.6; color:var(--ink-2); max-width:36em; }
+  .figures{ display:flex; gap:56px; flex-wrap:wrap; }
+  .figures b{ display:block; font-size:42px; font-weight:600; letter-spacing:-.035em; line-height:1; font-variant-numeric:tabular-nums; }
+  .figures span{ display:block; margin-top:10px; font-size:14px; line-height:1.5; color:var(--muted); max-width:15em; }
+  .more{ display:inline-block; margin-top:32px; font-size:15px; color:var(--ink); text-decoration:underline;
+         text-decoration-color:var(--rule-2); text-underline-offset:4px; transition:text-decoration-color 150ms ease; }
+  .explain{ padding-bottom:80px; }
+
+  @media (hover:hover) and (pointer:fine){
+    .try button:hover, .more:hover{ text-decoration-color:var(--ink); }
+  }
+  /* Reduced motion keeps the fade, which carries meaning, and drops the movement. */
+  @media (prefers-reduced-motion: reduce){
+    .result > *{ animation-name:fade; animation-duration:200ms; }
+    .spin{ animation-duration:1400ms; }
+  }
+  @media (max-width:880px){
+    .hero{ padding:64px 0 56px; }
+    .url-form{ flex-direction:column; }
+    .url-form .btn{ width:100%; }
+    .row{ grid-template-columns:1fr; gap:18px; padding:36px 0; }
+    .res-found, .answers > div{ grid-template-columns:1fr; gap:2px; }
+    .res-found dd{ margin-bottom:10px; }
+    .figures{ gap:32px; }
+  }
+{% endblock %}
+
+{% block content %}
+<section class="hero">
+  <div class="wrap">
+    <span class="eyebrow">Phishing link checker</span>
+    <h1>Check a link before you open it.</h1>
+    <p class="lede">PhishLens reads only the text of a URL, never the page behind it, and tells you
+       whether it looks like phishing.</p>
+
+    <div class="checker">
+      <form class="url-form" id="form" autocomplete="off">
+        <input class="url-input" type="text" id="url" placeholder="https://" spellcheck="false"
+               aria-label="URL to check" autofocus>
+        <button class="btn" type="submit" id="submitBtn">Check link</button>
+      </form>
+      <p class="try" id="urlExamples">Try
+        <button type="button" data-url="http://paypal-secure-login-verify.account-update.xyz/signin">a phishing link</button><span class="sep">&middot;</span><button type="button" data-url="https://github.com/torvalds/linux">a real site</button><span class="sep">&middot;</span><button type="button" data-url="https://bit.ly/3xK9zQ2">a shortener</button><span class="sep">&middot;</span><button type="button" data-url="https://arnaz0n-secure.com/login">a look-alike</button>
+      </p>
+    </div>
+
+    <div id="result" aria-live="polite"></div>
+  </div>
+</section>
+
+<section class="explain" id="how">
+  <div class="wrap">
+    <div class="row">
+      <div class="row-label">01<b>How it works</b></div>
+      <div class="row-body">
+        <ol class="steps">
+          <li><div><b>Read the link.</b> <span>Only the characters of the URL are used. The page is
+              never opened, so nothing can load or track you.</span></div></li>
+          <li><div><b>Measure 36 signals.</b> <span>Length, randomness, bait words, brand names and
+              look-alike spellings, such as rn standing in for m.</span></div></li>
+          <li><div><b>Decide and explain.</b> <span>A gradient boosted model scores the link, and SHAP
+              shows which signals pushed that score up or down.</span></div></li>
+        </ol>
+      </div>
+    </div>
+
+    <div class="row">
+      <div class="row-label">02<b>Three answers</b></div>
+      <div class="row-body">
+        <dl class="answers">
+          <div><dt><i style="background:var(--phish)"></i>Phishing</dt>
+               <dd>Clear signs of deception, such as a misspelled brand or bait words.</dd></div>
+          <div><dt><i style="background:var(--legit)"></i>Legitimate</dt>
+               <dd>Nothing suspicious in how the link is built.</dd></div>
+          <div><dt><i style="background:var(--unsure)"></i>Uncertain</dt>
+               <dd>Too little evidence, as with a shortened link. It says so instead of guessing.</dd></div>
+        </dl>
+      </div>
+    </div>
+
+    <div class="row">
+      <div class="row-label">03<b>The report</b></div>
+      <div class="row-body">
+        <p class="prose">Every check comes with a PDF you can preview, download and share. It covers why
+           the model decided, the SHAP contributions, all 36 signals, and the domain's registration
+           and certificate.</p>
+      </div>
+    </div>
+
+    <div class="row">
+      <div class="row-label">04<b>Measured honestly</b></div>
+      <div class="row-body">
+        <div class="figures">
+          <div><b>97.4%</b><span>accuracy on 20,000 real URLs the model never saw</span></div>
+          <div><b>5.9%</b><span>precision once phishing is as rare as in live traffic</span></div>
+          <div><b>18&thinsp;&micro;s</b><span>to check one link, with a 0.71 MB model</span></div>
+        </div>
+        <a class="more" href="/results">See the full results</a>
+      </div>
+    </div>
+  </div>
+</section>
+{% endblock %}
+
+{% block script %}
+<script>
+const form = document.getElementById('form');
+const urlInput = document.getElementById('url');
+const resultDiv = document.getElementById('result');
+const submitBtn = document.getElementById('submitBtn');
+
+document.querySelectorAll('#urlExamples button').forEach(b => {
+  b.addEventListener('click', () => { urlInput.value = b.dataset.url; form.requestSubmit(); });
+});
+
+function esc(s){ return String(s).replace(/[&<>"]/g, c => ({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;'}[c])); }
+function sentence(s){
+  s = String(s || '').trim();
+  if (!s) return s;
+  s = s[0].toUpperCase() + s.slice(1);
+  return /[.!?]$/.test(s) ? s : s + '.';
+}
+
+const VERDICTS = {
+  PHISHING:   ['phishing',   'Phishing',   'Do not open this link or enter any details on the page it leads to.'],
+  LEGITIMATE: ['legitimate', 'Legitimate', 'Nothing suspicious was found in the link text. Still make sure you trust whoever sent it.'],
+  UNCERTAIN:  ['uncertain',  'Uncertain',  null],
+};
+
+/* Download runs through fetch so the button can show the report is being
+   prepared: it includes live WHOIS, DNS and TLS lookups. If fetch fails for
+   any reason, fall back to a plain navigation to the same file. */
+function wireDownload(btn){
+  btn.addEventListener('click', async (e) => {
+    e.preventDefault();
+    if (btn.getAttribute('aria-busy') === 'true') return;
+    const label = btn.innerHTML;
+    btn.setAttribute('aria-busy', 'true');
+    btn.innerHTML = '<span class="spin" aria-hidden="true"></span>Preparing';
+    try {
+      const res = await fetch(btn.href);
+      if (!res.ok) throw new Error('HTTP ' + res.status);
+      const blob = await res.blob();
+      const m = /filename="([^"]+)"/.exec(res.headers.get('Content-Disposition') || '');
+      const a = document.createElement('a');
+      a.href = URL.createObjectURL(blob);
+      a.download = m ? m[1] : 'phishlens-report.pdf';
+      document.body.appendChild(a); a.click(); a.remove();
+      setTimeout(() => URL.revokeObjectURL(a.href), 5000);
+    } catch (err) {
+      window.location.href = btn.href;
+    } finally {
+      btn.removeAttribute('aria-busy');
+      btn.innerHTML = label;
+    }
+  });
+}
+
+function render(d){
+  if (d.error){ resultDiv.innerHTML = `<div class="result"><p class="error">${esc(d.error)}</p></div>`; return; }
+  const [cls, label, advice] = VERDICTS[d.verdict] || ['uncertain', d.verdict, null];
+  // decision_reason is set when something other than the model settled it:
+  // the domain is a known real one, the page is published by a stranger, or
+  // the link only redirects. That reason is more use than generic advice.
+  const note = d.decision_reason ? sentence(d.decision_reason)
+             : d.abstained ? sentence(d.abstain_reason) : advice;
+
+  let h = `<div class="result ${cls}">
+    <div class="res-top">
+      <div class="res-verdict"><span class="dot"></span>${esc(label)}</div>
+      ${d.abstained ? '<div class="res-conf">No verdict</div>'
+                    : `<div class="res-conf"><b>${(d.confidence * 100).toFixed(1)}%</b> confidence</div>`}
+    </div>
+    <div class="res-url">${esc(d.url)}</div>`;
+  if (note) h += `<p class="res-note">${esc(note)}</p>`;
+
+  const brands = d.brands_referenced || [], words = d.suspicious_words || [];
+  if (brands.length || words.length){
+    h += `<dl class="res-found">`;
+    if (brands.length) h += `<dt>Brand in the link</dt><dd>${esc(brands.join(', '))}</dd>`;
+    if (words.length)  h += `<dt>Suspicious words</dt><dd>${esc(words.join(', '))}</dd>`;
+    h += `</dl>`;
+  } else {
+    h += `<p class="res-none">No brand names or suspicious words in the link.</p>`;
+  }
+
+  const src = '/report?url=' + encodeURIComponent(d.url);
+  h += `<div class="res-report">
+      <div class="rr-doc" aria-hidden="true">PDF</div>
+      <div class="rr-text"><b>${esc(d.report_name || 'phishlens-report.pdf')}</b>
+        <span>Why it decided, SHAP contributions, all ${(d.signals || []).length} signals and domain details</span></div>
+      <div class="rr-actions">
+        <a class="btn ghost" href="${src}" target="_blank" rel="noopener">Preview</a>
+        <a class="btn" id="dlBtn" href="${src}&download=1">Download</a>
+      </div>
+    </div></div>`;
+
+  resultDiv.innerHTML = h;
+  wireDownload(document.getElementById('dlBtn'));
+}
+
+form.addEventListener('submit', async (e) => {
+  e.preventDefault();
+  const url = urlInput.value.trim();
+  if (!url) { urlInput.focus(); return; }
+  submitBtn.disabled = true; submitBtn.textContent = 'Checking';
+  try{
+    const res = await fetch('/api/check', {method:'POST', headers:{'Content-Type':'application/json'}, body:JSON.stringify({url})});
+    render(await res.json());
+  } catch(err){
+    resultDiv.innerHTML = `<div class="result"><p class="error">Request failed: ${esc(err)}</p></div>`;
+  } finally {
+    submitBtn.disabled = false; submitBtn.textContent = 'Check link';
+  }
+});
+</script>
+{% endblock %}

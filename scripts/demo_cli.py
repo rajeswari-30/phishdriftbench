@@ -3,7 +3,7 @@
 Run: PYTHONPATH=src python scripts/demo_cli.py
 (Train the model first if you haven't: PYTHONPATH=src python scripts/train_demo_model.py)
 """
-from phishdriftbench.demo import model
+from phishdriftbench.demo import model, trust
 
 
 def print_result(result: dict):
@@ -12,6 +12,13 @@ def print_result(result: dict):
     print(f"URL:        {result['url']}")
     print(f"VERDICT:    {result['verdict']}  (confidence {result['confidence']*100:.1f}%)")
     print(bar)
+
+    # When something other than the classifier settled it, say so first: the
+    # ML score printed below is then context, not the reason.
+    reason = result.get("decision_reason") or result.get("abstain_reason")
+    if reason:
+        print(f"Decided by the {result.get('decided_by', 'model')}: {reason}.")
+        print()
 
     if result["squatting_reasons"]:
         print("Brand-jacking / squatting screen flagged:")
@@ -48,7 +55,11 @@ def main():
             break
         if not url or url.lower() in {"quit", "exit"}:
             break
-        result = model.predict_and_explain(url, m)
+        try:
+            result = model.predict_and_explain(url, m)
+        except trust.BadURL as e:
+            print(f"  {e}\n")
+            continue
         print_result(result)
 
 

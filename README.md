@@ -245,23 +245,74 @@ A separate, ordinary train-once model (not one of the paper's B1-B5 baselines) f
 the detector on a URL — useful for a viva/demo, not a paper result.
 
 ```bash
-PYTHONPATH=src python scripts/train_demo_model.py   # one-time, ~1 min
-PYTHONPATH=src python scripts/demo_cli.py            # terminal version
-python webapp/app.py                                 # web version, http://127.0.0.1:5001
+PYTHONPATH=src python scripts/build_trusted_domains.py  # one-time, the Layer-0 lists (~2 min)
+PYTHONPATH=src python scripts/train_demo_v12.py         # one-time, the current recipe (~40 min)
+PYTHONPATH=src python scripts/demo_cli.py               # terminal version
+python webapp/app.py                                    # web version, http://127.0.0.1:5001
+PYTHONPATH=src python scripts/stress_test_demo.py       # regression battery, 60 real-world URLs
 ```
 
-Known limitation, left visible in the tool rather than hidden: distinguishing "the brand's real
-domain" from "brand-jacking" from lexical features alone is a genuinely hard, actively researched
-problem — several base papers call this out explicitly as unsolved — so some real brand URL is
-likely still misclassified by any given snapshot of this model. As of v8
-(`scripts/train_demo_v8.py`), the previously-documented failures on `amazon.com/dp/...`,
-`bbc.co.uk/news`, `docs.google.com/document/...`, `drive.google.com/file/d/.../view` and
-`accounts.google.com/signin` are all fixed (verified against the real trained checkpoint, not
-just claimed) with validation TPR/FPR essentially unchanged (97.00% / 1.79% vs. v7's 97.00% /
-1.81%) — i.e. this was a genuine fix, not a recall/precision trade-off. See
-`src/phishdriftbench/demo/model.py` (`_SERVICE_PATH_HINTS`) for what was added and why: v7 taught
-the model that hosts like `drive.google.com` were legitimate but attached only generic random
-paths to them, missing the *actual* URL shapes those specific products use.
+A trained model and its Layer-0 lists are committed under `data/processed/demo_model/`, so a
+fresh clone can run the demo without retraining.
+
+### How the demo answers, in three layers
+
+A live battery of 73 everyday URLs (`scripts/stress_test_demo.py`) found 13 **real** sites called
+PHISHING: a Google search with five query parameters, a Drive folder ID, a tweet ID, a Microsoft
+OAuth redirect, `medium.com/@author/...`, and `google.com` typed without `https://`. None of that
+is a modelling bug. What makes those links safe is not their shape, it is that the domain really
+is Google's, and URL text alone cannot establish that. So the demo now answers in order:
+
+| Layer | What it settles | Where |
+|---|---|---|
+| 0 | Input repair, then: is this a domain people actually use? Is the destination or the author outside the URL (shortener, redirect, `sites.google.com/view/...`)? | `demo/trust.py`, lists built by `scripts/build_trusted_domains.py` |
+| 1 | Explicit brand-jacking evidence in the text (a misspelled brand plus bait words) | `models/baselines.py` squatting screen |
+| 2 | Everything else: the XGBoost lexical classifier, with its calibrated abstention band | `demo/model.py` |
+
+Layer 0's lists are offline files, so "no page is ever fetched" still holds. They are filtered so
+that popularity alone never confers trust: subdomain-hosting providers are removed via the Public
+Suffix List's private section, hosts that repeatedly serve strangers' pages are removed from the
+corpora themselves (6,208 phishing URLs in the acquired data are `docs.google.com` presentations),
+and the residual leak is reported rather than tuned away. Explicit evidence still outranks the
+list: `bit.ly/paypal-verify-account` is PHISHING, not "destination unknown".
+
+### What it actually does, measured
+
+Layer 0 fixes popular sites. It does nothing for the long tail — a small shop, a university
+department, anything too small for a 30,000-domain list — and that is where the classifier's
+training artifacts showed. On 1,500 **real** domains ranked 600k–1M, wearing URL shapes written
+independently of the training generator:
+
+| | v11 | v12 (`scripts/train_demo_v12.py`) |
+|---|---|---|
+| Real long-tail site called PHISHING | 56.8% | **2.9%** |
+| Escalated as UNCERTAIN | 8.2% | 28.1% |
+| Called LEGITIMATE | 35.0% | 69.0% |
+
+The cause was not the model: no legitimate URL in training had a query string, an opaque
+identifier, an `@handle` or a plain-`http` scheme, because Tranco and PhiUSIIL store bare domains
+and the loader prefixes `https://`. Phishing URLs have all four, so the model learned each one as
+evidence. v12 adds those shapes to the legitimate class, which is correcting a collection
+artifact, not teaching the model to ignore a phishing signal.
+
+On 4,000 real phishing URLs end to end: 72.5% PHISHING, 24.4% UNCERTAIN, 3.1% called legitimate.
+The abstention band earns its place on both sides — removing it would take real sites flagged from
+1.0% to 8.3% and phishing missed from 3.1% to 5.5%.
+
+Known limitations, left visible in the tool rather than hidden:
+
+- **Pages published by strangers get no verdict.** `docs.google.com/presentation/...`,
+  `sites.google.com/view/...`, a Weebly subdomain: the domain is genuine, the author is not in the
+  URL. 6,208 phishing URLs in the acquired corpora are exactly this.
+- **A compromised real site still passes.** 0.245% of the known phishing corpus sits on a domain
+  the trusted list vouches for, scattered across hacked universities and news sites. The URL really
+  is theirs, so no URL-only detector catches this even in principle.
+- **Correctly spelled impersonation is unsolved.** `paypal-support-team.com` is spelled properly;
+  recognising the intent needs reasoning this model does not do. Several base papers call this out
+  as open.
+- **Brands outside the list.** Crypto-wallet phishing (`metamask-wallet-restore.app`) lands on
+  UNCERTAIN rather than PHISHING, because those brand names are not in the lists the squatting
+  screen checks.
 
 ## Repository layout
 
@@ -292,10 +343,14 @@ phishdriftbench/
 │   ├── models/baselines.py    ← B1-B5 reimplemented baselines
 │   ├── eval/dedup.py          ← duplicate/near-duplicate leakage probe (LSH)
 │   ├── eval/isolated_run.py   ← runs each baseline in its own subprocess (see threading-notes.md)
+│   ├── demo/model.py          ← the interactive demo's own model (not a paper baseline)
+│   ├── demo/trust.py          ← Layer 0: input repair + offline known-site / user-content lists
 │   └── dash/                  ← stability.py (C4 scoring) + dash.py (C5 mitigation)
 ├── scripts/                    ← see scripts/README.md for the full grouped index (38 files)
 │   ├── smoke_test.py          ← end-to-end pipeline check on synthetic data
-│   ├── train_demo_v8.py       ← current demo-model training recipe (see history in train_demo_v7.py)
+│   ├── train_demo_v12.py      ← current demo-model training recipe (history: train_demo_v7.py onward)
+│   ├── build_trusted_domains.py ← builds the demo's offline Layer-0 lists
+│   ├── stress_test_demo.py    ← the demo's real-world URL battery (regression check)
 │   └── verify_length_leakage.py, locate_leakage_mechanism.py  ← earlier leakage probes
 ├── tests/                     ← pytest unit tests for the core modules (run: `pytest`)
 ├── webapp/                    ← Flask demo app

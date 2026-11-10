@@ -99,6 +99,58 @@ def test_well_known_real_domains_stay_legitimate(url, demo_model):
     assert model.predict_and_explain(url, demo_model)["verdict"] == "LEGITIMATE"
 
 
+@pytest.mark.parametrize("url", [
+    "https://rbi-refund.com", "https://reservebank-india-refund.com",
+    "https://sbi-kyc-verify.tk", "https://hdfcbank-kyc-update.com",
+    "https://icicibank-otp-verify.xyz", "https://paytm-cashback-reward.xyz",
+    "https://pnb-account-suspended.com",
+])
+def test_indian_institution_squats_are_caught(url, demo_model):
+    """v11: a user-reported live test with a fake 'Reserve Bank' URL found
+    these all scored LEGITIMATE -- Indian banks/govt/payments brands were
+    completely absent from the brand list, and region-specific bait words
+    ('refund', 'kyc', 'otp', 'cashback') were absent from the suspicious-word
+    list, so the URL scored zero evidence on both axes at once."""
+    assert model.predict_and_explain(url, demo_model)["verdict"] == "PHISHING"
+
+
+@pytest.mark.parametrize("url", [
+    "https://rbi.org.in", "https://sbi.co.in", "https://icicibank.com",
+    "https://paytm.com", "https://phonepe.com", "https://irctc.co.in",
+    "https://uidai.gov.in",
+])
+def test_real_indian_institutions_stay_legitimate(url, demo_model):
+    """Widened brand coverage must not make the model paranoid about the
+    real institutions those squats imitate -- same discipline as the
+    equivalent global-brand regression test above."""
+    assert model.predict_and_explain(url, demo_model)["verdict"] == "LEGITIMATE"
+
+
+@pytest.mark.parametrize("base", [
+    "https://amazon.com", "https://google.com", "https://paypal.com",
+    "https://oracle.com", "https://github.com", "https://rbi.org.in",
+])
+def test_bare_trailing_slash_does_not_change_the_verdict(base, demo_model):
+    """A trailing slash on the root path carries no information, but the
+    corpora encode it as a near-perfect phishing signal (Tranco stores
+    domains bare; 32% of PhishTank URLs end in "/"). Before normalization
+    every one of these flipped to PHISHING at ~97% confidence the moment a
+    user pasted the form their browser shows them."""
+    without = model.predict_and_explain(base, demo_model)
+    with_slash = model.predict_and_explain(base + "/", demo_model)
+    assert without["verdict"] == with_slash["verdict"] == "LEGITIMATE"
+    assert without["ml_score"] == with_slash["ml_score"]
+
+
+def test_normalize_for_scoring_only_touches_the_root_path():
+    """Deeper trailing slashes are legitimate training shapes (_random_path
+    emits them on 6% of generated paths), so they must be left alone."""
+    assert model.normalize_for_scoring("https://a.com/") == "https://a.com"
+    assert model.normalize_for_scoring("https://a.com") == "https://a.com"
+    assert model.normalize_for_scoring("https://a.com/news/") == "https://a.com/news/"
+    assert model.normalize_for_scoring("https://a.com/?q=1") == "https://a.com/?q=1"
+
+
 def test_augment_legit_with_paths_respects_fraction():
     import numpy as np
 
@@ -108,3 +160,43 @@ def test_augment_legit_with_paths_respects_fraction():
     changed = sum(1 for orig, new in zip(urls, out) if orig != new)
     # allow generous slack: this is a stochastic function, not an exact fraction
     assert 100 <= changed <= 180
+
+
+# --------------------------------------------------------------------------
+# Real-world URL shapes. The full battery (with the phishing side and the
+# links whose destination is unknowable) lives in scripts/stress_test_demo.py;
+# these are the cases that were measured WRONG before Layer 0 existed, kept
+# here so an ordinary `pytest` run catches the regression.
+# --------------------------------------------------------------------------
+
+@pytest.mark.parametrize("url", [
+    "google.com",                                              # no scheme typed
+    "HTTPS://WWW.GOOGLE.COM/",                                 # shouting
+    "https://www.google.com/search?q=phishing&oq=p&ie=UTF-8",  # query string
+    "https://www.amazon.in/dp/B0CHX1W1XY?ref=cm_sw_r_apan",    # product + ref
+    "https://x.com/someone/status/1785942394857203712",        # 19-digit id
+    "https://medium.com/@author/why-urls-are-hard-8f3a2b1c9d4e",  # @handle
+    "https://login.microsoftonline.com/common/oauth2/v2.0/authorize?client_id=abc",
+    "https://youtu.be/dQw4w9WgXcQ",                            # first-party short link
+])
+def test_real_links_are_not_called_phishing(url, demo_model):
+    assert model.predict_and_explain(url, demo_model)["verdict"] != "PHISHING"
+
+
+@pytest.mark.parametrize("url", [
+    "https://faceb00k-login.com/",              # digit-swapped brand + bait
+    "https://paypa1-secure.com/verify",
+    "http://www.paypal.com@evil-site.tk/login",  # real host is evil-site.tk
+    "hxxps://secure-wellsfargo[.]tk/login",      # defanged, as advisories write it
+])
+def test_impersonation_is_never_called_legitimate(url, demo_model):
+    assert model.predict_and_explain(url, demo_model)["verdict"] != "LEGITIMATE"
+
+
+@pytest.mark.parametrize("url", [
+    "https://sites.google.com/view/some-page/home",   # published by a stranger
+    "https://www.google.com/url?q=http://evil.tk",    # destination is elsewhere
+])
+def test_pages_written_by_strangers_are_not_vouched_for(url, demo_model):
+    """The domain is genuinely Google's; who wrote the page is not in the URL."""
+    assert model.predict_and_explain(url, demo_model)["verdict"] != "LEGITIMATE"

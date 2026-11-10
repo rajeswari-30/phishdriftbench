@@ -130,6 +130,54 @@ def test_paper_feature_pin_excludes_the_added_feature():
     assert set(lexical.PAPER_P1_FEATURES) < set(lexical.LexicalFeatures.field_names())
 
 
+@pytest.mark.parametrize("url", [
+    "https://orac2e.com", "https://0racle.com", "https://1inkedin.com",
+    "https://ebayy.com", "https://c0inbase.com", "https://fed3x.com",
+])
+def test_fuzzy_brand_covers_more_than_the_paper_frozen_thirteen(url):
+    """A live check found 'oracle' (and most brands outside payments/social/
+    big-tech) simply absent from the small paper-frozen brand list, so
+    orac2e.com scored zero brand evidence -- not a fuzzy-matching failure,
+    but a coverage gap. _FUZZY_BRAND_TOKENS is a separate, wider list used
+    only by this feature so the paper's pinned features never change."""
+    assert lexical.extract(url).num_brand_tokens_fuzzy >= 1
+
+
+@pytest.mark.parametrize("url", [
+    "https://oracle.com", "https://adobe.com", "https://linkedin.com",
+    "https://ebay.com", "https://coinbase.com", "https://fedex.com",
+    "https://github.com/torvalds/linux", "https://gitlab.com",
+])
+def test_fuzzy_brand_does_not_flag_correctly_spelled_real_domains(url):
+    """A correctly-spelled brand outside the small exact-match list must not
+    match itself in the broader fuzzy list -- caught live as a bug where an
+    early guard excluded these via skeleton equality, which also silently
+    discarded genuine confusable squats (1inkedin -> skeleton 'linkedin')
+    before they reached the match check."""
+    assert lexical.extract(url).num_brand_tokens_fuzzy == 0
+
+
+def test_fuzzy_brand_list_has_no_within_list_collisions():
+    """github/gitlab sit exactly 2 edits apart; if the raw edit-distance
+    threshold ever allows distance 2 for 6-char names again, one real brand
+    would be flagged as a typosquat of the other. Scans the live list rather
+    than hardcoding pairs, so a future addition is checked automatically.
+    Short acronyms (rbi/sbi/pnb) are exempt: they never go through
+    distance-based matching at all (see _SHORT_ACRONYM_BRANDS), matched only
+    by exact whole-label equality, so a short distance between two acronyms
+    (rbi/sbi) cannot cause either to be mistaken for the other."""
+    brands = list(dict.fromkeys(lexical._FUZZY_BRAND_TOKENS))
+    for i, a in enumerate(brands):
+        if a in lexical._SHORT_ACRONYM_BRANDS:
+            continue
+        for b in brands[i + 1:]:
+            if b in lexical._SHORT_ACRONYM_BRANDS:
+                continue
+            if abs(len(a) - len(b)) > 2:
+                continue
+            assert lexical._levenshtein(a, b) > 1, f"{a!r} and {b!r} collide"
+
+
 def test_extract_detects_newer_shorteners():
     """v9: the shortener list was expanded past the original 11 domains."""
     assert lexical.extract("https://t.ly/abc123").is_shortener == 1

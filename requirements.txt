@@ -14,4 +14,5 @@ torch
 transformers
 datasketch
 flask
+reportlab
 pytest

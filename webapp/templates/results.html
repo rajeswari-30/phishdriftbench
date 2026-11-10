@@ -1,0 +1,104 @@
+{% extends "base.html" %}
+{% block title %}Results: PhishLens{% endblock %}
+
+{% block style %}
+  .stat .tag{ font-size:12px; text-transform:uppercase; letter-spacing:.4px; color:var(--muted); font-weight:500; }
+  .stat .num{ font-size:36px; line-height:1.1; font-weight:600; letter-spacing:-1px; margin:20px 0 6px; }
+  .stat .name{ font-size:14px; font-weight:500; }
+  .stat .desc{ color:var(--muted); font-size:13px; line-height:20px; margin-top:2px; }
+
+  .chart-quote{ font-size:16px; line-height:28px; max-width:520px; margin:0 0 24px; }
+  .chart-quote b{ font-weight:600; }
+  .chart-svg{ width:100%; height:auto; display:block; }
+  .axis-lbl{ font-size:11px; fill:#737373; }
+  .val-lbl{ font-size:13px; font-weight:600; fill:#0a0a0a; }
+
+  {% endblock %}
+
+{% block content %}
+<div class="wrap page-head">
+  <span class="eyebrow">Measured</span>
+  <h1>How good is it, honestly?</h1>
+  <p class="lede">Every figure comes from a held out set of 20,000 real URLs the model never saw,
+     including the number that undercuts the others.</p>
+</div>
+
+<section class="band">
+  <div class="wrap grid-3">
+    <div class="card stat">
+      <div class="tag">Accuracy</div>
+      <div class="num">97.4%</div>
+      <div class="name">Correct verdicts</div>
+      <div class="desc">On the balanced held out set.</div>
+    </div>
+    <div class="card stat">
+      <div class="tag">Recall</div>
+      <div class="num">97.0%</div>
+      <div class="name">Phishing caught</div>
+      <div class="desc">Share of real phishing URLs flagged.</div>
+    </div>
+    <div class="card stat">
+      <div class="tag">False alarms</div>
+      <div class="num">2.2%</div>
+      <div class="name">Safe links misflagged</div>
+      <div class="desc">Legitimate URLs wrongly marked.</div>
+    </div>
+  </div>
+</section>
+
+<section class="band">
+  <div class="wrap">
+    <div class="sec-head">
+      <h2>The number that matters more.</h2>
+      <p>Phishing is rare. As it gets rarer, the same detector's alerts become overwhelmingly wrong,
+         even though its accuracy never moves.</p>
+    </div>
+
+    <div class="card chart-card">
+      <p class="chart-quote">
+        A detector scoring <b>99% AUC</b> on a balanced test set drops to <b>5.9% precision</b> once
+        phishing is as rare as it really is. Roughly 16 of every 17 alerts become false alarms.
+      </p>
+      <svg class="chart-svg" viewBox="0 0 700 300" role="img"
+           aria-label="Precision falling from 86.4 percent to 5.9 percent as phishing prevalence drops">
+        <defs>
+          <linearGradient id="fillGrad" x1="0" y1="0" x2="0" y2="1">
+            <stop offset="0%" stop-color="#0a0a0a" stop-opacity=".07"/>
+            <stop offset="100%" stop-color="#0a0a0a" stop-opacity="0"/>
+          </linearGradient>
+        </defs>
+        <g stroke="#e5e5e5" stroke-width="1">
+          <line x1="60" y1="40" x2="660" y2="40"/><line x1="60" y1="90" x2="660" y2="90"/>
+          <line x1="60" y1="140" x2="660" y2="140"/><line x1="60" y1="190" x2="660" y2="190"/>
+          <line x1="60" y1="240" x2="660" y2="240"/>
+        </g>
+        <g class="axis-lbl" text-anchor="end">
+          <text x="50" y="44">100%</text><text x="50" y="144">50%</text><text x="50" y="244">0%</text>
+        </g>
+        <path class="pop" fill="url(#fillGrad)"
+              d="M60,67.2 C200,70 210,150 350,162.6 C490,175 500,225 640,228.2 L640,240 L60,240 Z"/>
+        <path class="draw" fill="none" stroke="#0a0a0a" stroke-width="2" stroke-linecap="round"
+              d="M60,67.2 C200,70 210,150 350,162.6 C490,175 500,225 640,228.2"/>
+        <circle class="pop p1" cx="60" cy="67.2" r="4.5" fill="#fafafa" stroke="#0a0a0a" stroke-width="2"/>
+        <circle class="pop p2" cx="350" cy="162.6" r="4.5" fill="#fafafa" stroke="#0a0a0a" stroke-width="2"/>
+        <circle class="pop p3" cx="640" cy="228.2" r="5.5" fill="#0a0a0a"/>
+        <g class="val-lbl" text-anchor="middle">
+          <text class="pop p1" x="74" y="52">86.4%</text>
+          <text class="pop p2" x="350" y="148">38.7%</text>
+          <text class="pop p3" x="614" y="214">5.9%</text>
+        </g>
+        <line x1="60" y1="240" x2="660" y2="240" stroke="#d4d4d4" stroke-width="1"/>
+        <g class="axis-lbl" text-anchor="middle">
+          <text x="60" y="262">1 in 100</text><text x="350" y="262">1 in 1,000</text>
+          <text x="640" y="262">1 in 10,000</text>
+          <text x="350" y="284" style="fill:#a3a3a3">How rare phishing is in the traffic scanned</text>
+        </g>
+      </svg>
+    </div>
+
+    <p style="margin-top:32px">
+      <a class="btn" href="/testing">See how it was tested</a>
+    </p>
+  </div>
+</section>
+{% endblock %}

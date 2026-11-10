@@ -30,26 +30,27 @@
     "num_suspicious_tokens",
     "num_brand_tokens",
     "num_brand_tokens_fuzzy",
+    "num_brand_tokens_extended",
+    "num_suspicious_tokens_extended",
     "brand_in_subdomain",
     "tld_length",
     "tld_is_common",
     "longest_word_length",
     "avg_token_length"
   ],
-  "decision_threshold": 0.09300000220537186,
-  "abstain_lo": 0.0744000017642975,
-  "abstain_hi": 0.3720000088214874,
-  "recipe": "v10: v9 + confusable-skeleton brand matching + synthetic bare typosquat training examples + calibrated abstention band",
+  "decision_threshold": 0.07900000363588333,
+  "abstain_lo": 0.039500001817941666,
+  "abstain_hi": 0.23700001090765,
+  "recipe": "v12: v11 + real-world legitimate URL shapes (query strings, opaque identifiers, @handles, locale segments, plain http), the fix for a measured 56.8% false-positive rate on long-tail real sites",
   "stage2_omitted": "BERT+LightGBM second stage not served interactively (torch/lightgbm process conflict); this is stage 1 of 2",
-  "paper_feature_divergence": "demo uses 34 features; all paper experiments used the 33 in lexical.PAPER_P1_FEATURES",
+  "paper_feature_divergence": "demo uses 36 features; all paper experiments used the 33 in lexical.PAPER_P1_FEATURES",
   "validation": {
-    "tpr": 0.9701,
-    "fpr": 0.0218,
-    "precision_at_1e-4": 0.004430726340419177,
-    "abstain_coverage": 0.9642,
-    "error_on_answered_before": 0.0268,
-    "error_on_answered_after": 0.014830947936112839
+    "tpr": 0.9702,
+    "fpr": 0.04,
+    "precision_at_1e-4": 0.0024198725863005576,
+    "abstain_coverage": 0.9055,
+    "error_on_answered_before": 0.0349,
+    "error_on_answered_after": 0.010933186085035893
   },
-  "n_train": 74456,
-  "abstention_note": "band pinned at/above the decision threshold (0.0930); an earlier unconstrained sweep chose a band reaching down to 0.0326, which abstained on well-known brand homepages scoring 0.02-0.06"
+  "n_train": 78898
 }

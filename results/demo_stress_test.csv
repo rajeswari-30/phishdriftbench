@@ -1,0 +1,61 @@
+group,url,expected,verdict,ok,decided_by,ml_score,squat
+legit,https://google.com,LEGITIMATE,LEGITIMATE,True,known-site list,0.0654,0.245
+legit,google.com,LEGITIMATE,LEGITIMATE,True,known-site list,0.0654,0.245
+legit,www.amazon.in,LEGITIMATE,LEGITIMATE,True,known-site list,0.0188,0.245
+legit,HTTPS://WWW.GOOGLE.COM/,LEGITIMATE,LEGITIMATE,True,known-site list,0.0059,0.245
+legit,http://example.com,ALLOW,LEGITIMATE,True,known-site list,0.0656,0.0
+legit,https://en.wikipedia.org/wiki/Phishing,LEGITIMATE,LEGITIMATE,True,known-site list,0.0787,0.0
+legit,https://www.google.com/search?q=phishing+detection&oq=phishing&sourceid=chrome&ie=UTF-8,LEGITIMATE,LEGITIMATE,True,known-site list,0.0725,0.27
+legit,https://www.amazon.in/dp/B0CHX1W1XY?ref=cm_sw_r_apan_dp_1A2B3C4D5E,LEGITIMATE,LEGITIMATE,True,known-site list,0.9171,0.245
+legit,https://www.flipkart.com/apple-iphone-15/p/itm6ac6485515ae4?pid=MOBGTAGPTB3VS24W,LEGITIMATE,LEGITIMATE,True,known-site list,0.0455,0.295
+legit,https://zoom.us/j/93812345678?pwd=aGVsbG93b3JsZA,LEGITIMATE,LEGITIMATE,True,known-site list,0.1171,0.227
+legit,https://login.microsoftonline.com/common/oauth2/v2.0/authorize?client_id=abc123&response_type=code,LEGITIMATE,LEGITIMATE,True,known-site list,0.0321,0.392
+legit,https://www.makemytrip.com/flight/search?itinerary=DEL-BOM-22%2F10%2F2026&tripType=O,LEGITIMATE,LEGITIMATE,True,known-site list,0.004,0.0
+legit,https://x.com/elonmusk/status/1785942394857203712,LEGITIMATE,LEGITIMATE,True,known-site list,0.0028,0.0
+legit,https://www.reddit.com/r/netsec/comments/1abcdef/some_post_title/,LEGITIMATE,LEGITIMATE,True,known-site list,0.7524,0.227
+legit,https://medium.com/@someauthor/why-urls-are-hard-8f3a2b1c9d4e,LEGITIMATE,LEGITIMATE,True,known-site list,0.008,0.0
+legit,https://drive.google.com/drive/folders/1A2b3C4d5E6f7G8h9I0jK,ALLOW,UNCERTAIN,True,user-content rule,0.1628,0.245
+legit,https://docs.google.com/spreadsheets/d/1BxiMVs0XRA5nFMdKvBdBZjgmUUqptlbs74OgvE2upms/edit#gid=0,ALLOW,UNCERTAIN,True,user-content rule,0.78,0.245
+legit,https://github.com/torvalds/linux/commit/8f3a2b1c9d4e5f6a7b8c9d0e1f2a3b4c5d6e7f80,LEGITIMATE,LEGITIMATE,True,known-site list,0.0062,0.227
+legit,https://open.spotify.com/track/4cOdK2wGLETKBW3PvgPWqT,LEGITIMATE,LEGITIMATE,True,known-site list,0.3333,0.227
+legit,https://www.bbc.com/news/world-asia-india-68123456,LEGITIMATE,LEGITIMATE,True,known-site list,0.0641,0.0
+legit,https://docs.python.org/3/library/re.html,LEGITIMATE,LEGITIMATE,True,known-site list,0.2169,0.0
+legit,https://www.linkedin.com/in/some-person-1a2b3c4d/,LEGITIMATE,LEGITIMATE,True,known-site list,0.1884,0.274
+legit,https://www.hdfcbank.com/personal/borrow/popular-loans/personal-loan,LEGITIMATE,LEGITIMATE,True,known-site list,0.1072,0.274
+legit,https://www.icicibank.com/personal-banking/accounts/savings-account,LEGITIMATE,LEGITIMATE,True,known-site list,0.2546,0.502
+legit,https://uidai.gov.in/en/my-aadhaar/get-aadhaar.html,LEGITIMATE,LEGITIMATE,True,known-site list,0.0646,0.274
+legit,https://www.irctc.co.in/nget/train-search,LEGITIMATE,LEGITIMATE,True,known-site list,0.0223,0.251
+legit,https://facebook.com/login,ALLOW,LEGITIMATE,True,known-site list,0.44,0.392
+legit,https://accounts.google.com/signin/v2/identifier?service=mail,LEGITIMATE,LEGITIMATE,True,known-site list,0.0464,0.49
+legit,https://www.paypal.com/signin,LEGITIMATE,LEGITIMATE,True,known-site list,0.0369,0.392
+legit,https://appleid.apple.com/sign-in,ALLOW,LEGITIMATE,True,known-site list,0.0961,0.386
+legit,https://youtu.be/dQw4w9WgXcQ,LEGITIMATE,LEGITIMATE,True,known-site list,0.9624,0.0
+legit,https://wa.me/919876543210,LEGITIMATE,LEGITIMATE,True,known-site list,0.4222,0.0
+legit,https://www.hetzner.com/cloud/,ALLOW,LEGITIMATE,True,known-site list,0.1451,0.0
+legit,https://blog.cloudflare.com/cloudflare-radar-2025/,ALLOW,LEGITIMATE,True,known-site list,0.1993,0.274
+phish,http://secure-paypal-login.verify-account.tk/signin.php,PHISHING,PHISHING,True,squatting screen,0.9994,0.808
+phish,http://192.168.1.1/wp-admin/paypal/login.html,PHISHING,PHISHING,True,model,0.9915,0.417
+phish,https://faceb00k-login.com/,DENY,PHISHING,True,squatting screen,0.3588,0.596
+phish,https://paypa1-secure.com/verify,PHISHING,PHISHING,True,squatting screen,0.5328,0.736
+phish,https://goog2e.com,PHISHING,PHISHING,True,model,0.9906,0.35
+phish,https://arnaz0n-secure.com/login,PHISHING,PHISHING,True,squatting screen,0.4483,0.736
+phish,https://1inkedin.com,DENY,PHISHING,True,model,0.9932,0.35
+phish,https://metamask-wallet-restore.app/,DENY,PHISHING,True,model,0.5277,0.0
+phish,https://rbi-refund.com,PHISHING,PHISHING,True,model,0.4337,0.308
+phish,https://sbi-kyc-verify.tk,PHISHING,PHISHING,True,model,0.9975,0.468
+phish,https://hdfcbank-kyc-update.com,DENY,PHISHING,True,model,0.5177,0.468
+phish,https://icicibank-otp-verify.xyz,PHISHING,PHISHING,True,model,0.9979,0.468
+phish,https://paytm-cashback-reward.xyz,PHISHING,PHISHING,True,model,0.9979,0.388
+phish,http://www.paypal.com@evil-site.tk/login,DENY,PHISHING,True,model,0.8896,0.417
+phish,https://appleid.apple.com.verify-session.ru/login,PHISHING,PHISHING,True,squatting screen,0.9963,0.736
+phish,https://netflix-billing-update.click/account,PHISHING,PHISHING,True,squatting screen,0.9966,0.54
+phish,https://amazon-order-refund.online/verify?id=7723,PHISHING,PHISHING,True,squatting screen,0.999,0.504
+phish,https://microsoft-account-suspended.top/signin,PHISHING,PHISHING,True,squatting screen,0.998,0.54
+phish,https://chase-bank-alert.site/secure/login.php,PHISHING,PHISHING,True,squatting screen,0.9975,0.54
+phish,hxxps://secure-wellsfargo[.]tk/login,DENY,PHISHING,True,squatting screen,0.9969,0.515
+unknowable,https://bit.ly/3xK9zQ2,UNCERTAIN,UNCERTAIN,True,shortener rule,0.9977,0.0
+unknowable,https://tinyurl.com/mr3x9k2p,UNCERTAIN,UNCERTAIN,True,shortener rule,0.9767,0.0
+unknowable,https://sites.google.com/view/account-verify-2026/home,DENY,PHISHING,True,squatting screen,0.855,0.54
+unknowable,https://docs.google.com/presentation/d/1AbCdEfGhIjKlMnOpQrStUvWxYz/edit,UNCERTAIN,UNCERTAIN,True,user-content rule,0.7425,0.245
+unknowable,https://forms.office.com/pages/responsepage.aspx?id=abc123,UNCERTAIN,UNCERTAIN,True,user-content rule,0.096,0.0
+unknowable,https://www.google.com/url?q=http://evil.tk/login,UNCERTAIN,UNCERTAIN,True,redirect-link rule,0.2978,0.392
