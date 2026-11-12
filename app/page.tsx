@@ -5,7 +5,7 @@ import {
   IconFileSearch,
   IconLink,
   IconShieldExclamation,
-  IconSparkles,
+  IconWand,
 } from "@tabler/icons-react";
 import { Badge } from "@/components/ui";
 
@@ -14,7 +14,7 @@ const CHECKS = [
   { label: "Domain age", Icon: IconCalendarTime },
   { label: "Page scan", Icon: IconFileSearch },
   { label: "Link text", Icon: IconLink },
-  { label: "AI review", Icon: IconSparkles },
+  { label: "AI review", Icon: IconWand },
 ];
 
 export default function Home() {

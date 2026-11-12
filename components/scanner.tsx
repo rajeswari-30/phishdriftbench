@@ -189,7 +189,11 @@ export function Scanner() {
           </button>
         </form>
         <div className="flex flex-col gap-3 border-t border-line bg-surface-2/50 px-4 py-3 sm:flex-row sm:items-center">
-          <Switch checked={deep} onChange={setDeep} label="Deep scan" />
+          {/* On phones the examples come first and the setting sits at the
+              bottom under a hairline; from sm up it leads the row. */}
+          <div className="max-sm:order-last max-sm:-mx-4 max-sm:border-t max-sm:border-line max-sm:px-4 max-sm:pt-3">
+            <Switch checked={deep} onChange={setDeep} label="Deep scan" />
+          </div>
           <div className="grid grid-cols-2 gap-1.5 sm:ml-auto sm:flex sm:flex-wrap sm:justify-end">
             {EXAMPLES.map((ex) => (
               <button key={ex.url} type="button" onClick={() => run(ex.url)} className={cx(pillClass("ghost", "sm"), "max-sm:w-full")}>
