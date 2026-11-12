@@ -1,7 +1,7 @@
 import type { Metadata, Viewport } from "next";
 import { Geist_Mono, Inter } from "next/font/google";
 import Link from "next/link";
-import { IconBrandGithubFilled } from "@tabler/icons-react";
+import { GithubMark } from "@/components/github-mark";
 import { SiteHeader } from "@/components/site-header";
 import "./globals.css";
 
@@ -52,7 +52,7 @@ export default function RootLayout({ children }: { children: React.ReactNode }) 
               <Link href="/how-it-works" className="transition-colors hover:text-fg">How it works</Link>
               <Link href="/research" className="transition-colors hover:text-fg">Research</Link>
               <a href={GITHUB} target="_blank" rel="noopener noreferrer" className="inline-flex items-center gap-1.5 transition-colors hover:text-fg">
-                <IconBrandGithubFilled className="size-3.5" aria-hidden="true" />
+                <GithubMark className="size-3.5" />
                 Source
               </a>
             </div>
