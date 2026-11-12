@@ -35,6 +35,11 @@ FEATURE_COLS = lexical.LexicalFeatures.field_names()
 # confidence rather than at 100%, which the list has not earned.
 TRUSTED_CONFIDENCE = 0.9975
 
+# On a free hosting platform (see trust.hosted_platform) the URL's shape says
+# little, so the model alone only convicts when it is near-certain AND the
+# link carries bait words.
+HOSTED_PLATFORM_BAIT_SCORE = 0.9
+
 FEATURE_DESCRIPTIONS = {
     "url_length": "overall URL length",
     "hostname_length": "length of the domain/host part",
@@ -699,6 +704,23 @@ def predict_and_explain(url: str, model: DemoModel, top_k: int = 5) -> dict:
     # five parameters), and no amount of retraining can separate those by
     # text alone -- see demo/trust.py.
     signal = trust.assess(url)
+    if signal is not None and signal.kind == "homograph":
+        return _result(url, "PHISHING", 1.0, squat_score, squat_flagged, feat_row,
+                        ml_score, top_reasons, signals, model,
+                        decided_by=signal.layer_name, decision_reason=signal.reason,
+                        abstain_reason=None)
+    if signal is not None and signal.kind == "hosted_platform":
+        # Bait words plus a confident model are still evidence on a hosting
+        # platform (office365-login.web.app); shape alone is not.
+        baited = bool(lexical.detected_suspicious_words(url))
+        if squat_flagged or (baited and ml_score >= HOSTED_PLATFORM_BAIT_SCORE):
+            return _result(url, "PHISHING", final_score, squat_score, squat_flagged, feat_row,
+                            ml_score, top_reasons, signals, model,
+                            decided_by=decided_by, decision_reason=None, abstain_reason=None)
+        return _result(url, "UNCERTAIN", final_score, squat_score, squat_flagged, feat_row,
+                        ml_score, top_reasons, signals, model,
+                        decided_by=signal.layer_name, decision_reason=signal.reason,
+                        abstain_reason=signal.reason)
     if signal is not None:
         if signal.is_safe and squat_flagged and _impersonates_another_brand(url, signal.domain):
             # The domain is genuine, but the link also name-drops a different
@@ -778,7 +800,8 @@ def _result(url, verdict, final_score, squat_score, squat_flagged, feat_row, ml_
     return {
         "url": url,
         "verdict": verdict,
-        "confidence": final_score if verdict == "PHISHING" else 1 - final_score,
+        "risk": float(final_score),
+        "confidence": _confidence(verdict, final_score, decided_by, model.decision_threshold),
         "squatting_score": squat_score,
         "squatting_flagged": squat_flagged,
         "squatting_reasons": _squatting_reasons(feat_row),
@@ -793,6 +816,24 @@ def _result(url, verdict, final_score, squat_score, squat_flagged, feat_row, ml_
         "suspicious_words": lexical.detected_suspicious_words(url),
         "decision_threshold": model.decision_threshold,
     }
+
+
+def _confidence(verdict: str, score: float, decided_by: str, threshold: float) -> float:
+    """How far the score sits from the decision threshold, on a 0.5-1 scale.
+
+    The model's decision threshold is 0.079, not 0.5, so the raw phishing
+    probability is not a confidence: reporting it as one printed
+    "Phishing, 27% confidence" for a link the model had in fact flagged.
+    Rule-decided verdicts keep their fixed figures; an abstention has none."""
+    if verdict == "UNCERTAIN":
+        return 0.0
+    if decided_by == "known-site list":
+        return TRUSTED_CONFIDENCE
+    if score >= 1.0 or score <= 0.0:
+        return 1.0
+    if verdict == "PHISHING":
+        return 0.5 + 0.5 * (score - threshold) / (1.0 - threshold)
+    return 0.5 + 0.5 * (threshold - score) / threshold
 
 
 _shap_explainer_cache: dict[int, "shap.TreeExplainer"] = {}

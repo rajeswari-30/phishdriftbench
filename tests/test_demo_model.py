@@ -200,3 +200,42 @@ def test_impersonation_is_never_called_legitimate(url, demo_model):
 def test_pages_written_by_strangers_are_not_vouched_for(url, demo_model):
     """The domain is genuinely Google's; who wrote the page is not in the URL."""
     assert model.predict_and_explain(url, demo_model)["verdict"] != "LEGITIMATE"
+
+
+@pytest.mark.parametrize("url", [
+    "https://my-portfolio-2026.vercel.app",
+    "https://someones-portfolio.netlify.app",
+    "https://user.github.io/project",
+])
+def test_free_hosting_sites_are_not_convicted_on_shape(url, demo_model):
+    """Every *.vercel.app / *.netlify.app personal site scored PHISHING at
+    94-98% on URL shape alone; the text cannot tell who published it."""
+    assert model.predict_and_explain(url, demo_model)["verdict"] == "UNCERTAIN"
+
+
+@pytest.mark.parametrize("url", [
+    "https://login-microsoftonline-secure.vercel.app",
+    "https://office365-login.web.app",
+])
+def test_baited_free_hosting_sites_are_still_phishing(url, demo_model):
+    assert model.predict_and_explain(url, demo_model)["verdict"] == "PHISHING"
+
+
+@pytest.mark.parametrize("url", ["https://xn--pple-43d.com", "https://аpple.com/login"])
+def test_idn_homographs_are_phishing(url, demo_model):
+    result = model.predict_and_explain(url, demo_model)
+    assert result["verdict"] == "PHISHING"
+    assert result["decided_by"] == "homograph rule"
+
+
+def test_real_idn_domain_is_not_a_homograph(demo_model):
+    assert model.predict_and_explain("https://münchen.de", demo_model)["verdict"] != "PHISHING"
+
+
+def test_phishing_confidence_is_measured_from_the_threshold(demo_model):
+    """The threshold is 0.079, so a flagged link must never report <50%
+    confidence (it printed "Phishing, 27% confidence" before)."""
+    result = model.predict_and_explain("https://dhl-tracking-parcel.com/track", demo_model)
+    if result["verdict"] == "PHISHING":
+        assert result["confidence"] >= 0.5
+        assert result["risk"] == pytest.approx(result["ml_score"])
