@@ -29,7 +29,7 @@ import { validateLink } from "@/lib/validate";
 import { forget, loadRecent, remember, type RecentScan } from "@/lib/history";
 import type { ScanResult } from "@/lib/types";
 import { ResultView } from "./result-view";
-import { ScanProgress } from "./scan-progress";
+import { ResultSkeleton } from "./result-skeleton";
 import { Badge, Card, cx, pillClass } from "./ui";
 
 const EXAMPLES = [
@@ -136,7 +136,7 @@ export function Scanner() {
 
   return (
     <div>
-      <div className="mx-auto max-w-3xl">
+      <div className="stagger mx-auto max-w-3xl">
       <Card
         className={cx(
           "overflow-hidden transition-shadow",
@@ -182,7 +182,7 @@ export function Scanner() {
             }}
             className="h-10 min-w-0 flex-1 bg-transparent font-mono text-[14px] text-fg outline-none focus-visible:outline-none placeholder:font-sans placeholder:text-muted"
           />
-          <button type="submit" disabled={busy} aria-busy={busy} className={cx(pillClass("primary", "md"), "group")}>
+          <button type="submit" disabled={busy} aria-busy={busy} className={cx(pillClass("primary", "md"), "group min-w-[104px]")}>
             {busy ? <IconLoader2 className="animate-spin" stroke={2} aria-hidden="true" /> : null}
             {busy ? "Scanning" : "Scan"}
             {!busy && <IconArrowRight stroke={2} className="transition-transform duration-200 group-hover:translate-x-0.5" aria-hidden="true" />}
@@ -235,7 +235,7 @@ export function Scanner() {
       </div>
 
       <div ref={resultRef} className="scroll-mt-20">
-        {state.kind === "scanning" && <ScanProgress url={state.url} deep={state.deep} />}
+        {state.kind === "scanning" && <ResultSkeleton url={state.url} deep={state.deep} />}
         {state.kind === "error" && <ErrorCard error={state.error} onRetry={() => run(state.url)} />}
         {state.kind === "done" && <ResultView result={state.result} onRescan={() => run(state.result.input)} />}
       </div>
@@ -296,7 +296,7 @@ export function Scanner() {
                     <span className="min-w-0 flex-1 truncate font-mono text-[13px] text-fg-2 transition-colors group-hover:text-fg">{r.url}</span>
                     <span className="font-mono text-xs tabular-nums text-muted">{r.risk}</span>
                     <IconArrowRight
-                      className="size-4 shrink-0 -translate-x-1 text-faint opacity-0 transition-all duration-200 group-hover:translate-x-0 group-hover:opacity-100"
+                      className="size-4 shrink-0 -translate-x-1 text-faint opacity-0 transition-[transform,opacity] duration-200 ease-[var(--ease-out)] group-hover:translate-x-0 group-hover:opacity-100"
                       stroke={1.75}
                       aria-hidden="true"
                     />

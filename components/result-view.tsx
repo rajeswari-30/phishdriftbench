@@ -8,6 +8,8 @@ import {
   IconCheck,
   IconChevronDown,
   IconClock,
+  IconCopy,
+  IconCornerDownRight,
   IconDownload,
   IconFileText,
   IconLink,
@@ -28,7 +30,8 @@ import {
 import { useState } from "react";
 import { reportUrl } from "@/lib/api";
 import type { Finding, ScanResult, Severity, Verdict } from "@/lib/types";
-import { Badge, Card, CardHeader, cx, Metrics, pillClass, RollingNumber, TONE_BG, TONE_TEXT, type Tone } from "./ui";
+import { Segmented } from "./segmented";
+import { Badge, Card, CardHeader, cx, IconSwap, Metrics, pillClass, RollingNumber, TONE_BG, TONE_TEXT, type Tone } from "./ui";
 
 const VERDICT: Record<Verdict, { label: string; tone: Tone; Icon: TablerIcon }> = {
   phishing: { label: "Phishing", tone: "danger", Icon: IconShieldX },
@@ -61,11 +64,7 @@ const TONE_PANEL: Record<Tone, string> = {
   neutral: "bg-surface-2",
 };
 
-const VIEWS = [
-  { id: "overview", label: "Overview", Icon: IconListDetails },
-  { id: "advanced", label: "Advanced details", Icon: IconAdjustmentsHorizontal },
-] as const;
-type View = (typeof VIEWS)[number]["id"];
+type View = "overview" | "advanced";
 
 export function ResultView({ result, onRescan }: { result: ScanResult; onRescan: () => void }) {
   const v = VERDICT[result.verdict];
@@ -79,7 +78,7 @@ export function ResultView({ result, onRescan }: { result: ScanResult; onRescan:
   const checked = result.intel.filter((i) => i.status === "hit" || i.status === "clean").length;
 
   return (
-    <section className="enter mt-8 space-y-4" aria-label="Scan result">
+    <section className="stagger mt-8 space-y-4" aria-label="Scan result">
       <Card className="overflow-hidden">
         <div className="grid lg:grid-cols-[300px_minmax(0,1fr)]">
           {/* Verdict: the one thing to read first. */}
@@ -100,43 +99,9 @@ export function ResultView({ result, onRescan }: { result: ScanResult; onRescan:
 
           {/* Reason, link and actions. */}
           <div className="flex min-w-0 flex-col gap-4 p-5 sm:p-6">
-            <div className="flex flex-col gap-3 sm:flex-row sm:items-start sm:justify-between">
-              <p className="text-lg leading-snug font-medium text-pretty text-fg">{result.summary}</p>
-              <div className="flex shrink-0 flex-wrap gap-1.5">
-                <a href={reportUrl(result.input)} target="_blank" rel="noopener" className={pillClass("ghost", "sm")}>
-                  <IconFileText stroke={1.75} aria-hidden="true" />
-                  Report
-                </a>
-                <a href={reportUrl(result.input, true)} className={pillClass("ghost", "sm")} aria-label="Download PDF report">
-                  <IconDownload stroke={1.75} aria-hidden="true" />
-                  PDF
-                </a>
-                <button
-                  type="button"
-                  className={pillClass("ghost", "sm")}
-                  onClick={async () => {
-                    try {
-                      await navigator.clipboard.writeText(window.location.href);
-                      setCopied(true);
-                      setTimeout(() => setCopied(false), 1500);
-                    } catch {
-                      /* clipboard blocked */
-                    }
-                  }}
-                >
-                  {copied ? <IconCheck stroke={1.75} aria-hidden="true" /> : <IconShare stroke={1.75} aria-hidden="true" />}
-                  {copied ? "Copied" : "Share"}
-                </button>
-                <button type="button" onClick={onRescan} className={pillClass("ghost", "sm")} aria-label="Scan again">
-                  <IconRefresh stroke={1.75} aria-hidden="true" />
-                </button>
-              </div>
-            </div>
-            <TopReasons findings={result.findings} />
-            <div className="mt-auto space-y-1 rounded-[10px] border border-line bg-surface-2 px-3 py-2 font-mono text-xs text-muted">
-              <p className="break-all">{result.url}</p>
-              {moved && <p className="break-all text-fg-2">↳ {result.final_url}</p>}
-            </div>
+            <p className="text-lg leading-snug font-medium text-pretty text-fg">{result.summary}</p>
+            <TopReasons findings={result.findings} verdict={result.verdict} />
+            <LinkBox url={result.url} finalUrl={moved ? result.final_url : null} />
           </div>
         </div>
 
@@ -167,38 +132,63 @@ export function ResultView({ result, onRescan }: { result: ScanResult; onRescan:
         />
       </Card>
 
-      <div
-        role="tablist"
-        aria-label="Result detail level"
-        onKeyDown={(e) => {
-          if (e.key !== "ArrowRight" && e.key !== "ArrowLeft") return;
-          e.preventDefault();
-          const next = view === "overview" ? "advanced" : "overview";
-          setView(next);
-          document.getElementById(`view-${next}`)?.focus();
-        }}
-        className="inline-flex rounded-full border border-line bg-surface-2 p-1"
-      >
-        {VIEWS.map(({ id, label, Icon }) => (
+      {/* Toolbar: how much detail on the left, what to do with it on the right. */}
+      <div className="flex flex-wrap items-center justify-between gap-3">
+        <Segmented
+          label="Result detail level"
+          controls="view-panel"
+          value={view}
+          onChange={setView}
+          segments={[
+            {
+              id: "overview",
+              icon: <IconListDetails stroke={1.75} aria-hidden="true" />,
+              label: (
+                <>
+                  Overview <span className="font-mono text-[11px] text-faint">{signals}</span>
+                </>
+              ),
+            },
+            { id: "advanced", icon: <IconAdjustmentsHorizontal stroke={1.75} aria-hidden="true" />, label: "Advanced details" },
+          ]}
+        />
+        <div className="flex flex-wrap gap-1.5">
+          <a href={reportUrl(result.input)} target="_blank" rel="noopener" className={pillClass("ghost", "sm")}>
+            <IconFileText stroke={1.75} aria-hidden="true" />
+            Report
+          </a>
+          <a href={reportUrl(result.input, true)} className={pillClass("ghost", "sm")} aria-label="Download PDF report">
+            <IconDownload stroke={1.75} aria-hidden="true" />
+            PDF
+          </a>
           <button
-            key={id}
-            id={`view-${id}`}
-            role="tab"
             type="button"
-            aria-selected={view === id}
-            aria-controls="view-panel"
-            tabIndex={view === id ? 0 : -1}
-            onClick={() => setView(id)}
-            className="inline-flex items-center gap-1.5 rounded-full px-3.5 py-1.5 text-[13px] whitespace-nowrap text-muted transition-[color,background-color,box-shadow] duration-200 hover:text-fg aria-selected:bg-surface aria-selected:text-fg aria-selected:shadow-[0_0_0_1px_oklch(0%_0_0/0.08)]"
+            className={pillClass("ghost", "sm")}
+            onClick={async () => {
+              try {
+                await navigator.clipboard.writeText(window.location.href);
+                setCopied(true);
+                setTimeout(() => setCopied(false), 1500);
+              } catch {
+                /* clipboard blocked */
+              }
+            }}
           >
-            <Icon className="size-4" stroke={1.75} aria-hidden="true" />
-            {label}
-            {id === "overview" && <span className="font-mono text-[11px] text-faint">{signals}</span>}
+            <IconSwap
+              show={copied ? "b" : "a"}
+              a={<IconShare className="size-4" stroke={1.75} />}
+              b={<IconCheck className="size-4 text-ok" stroke={1.75} />}
+            />
+            <span aria-live="polite">{copied ? "Copied" : "Share"}</span>
           </button>
-        ))}
+          <button type="button" onClick={onRescan} className={pillClass("ghost", "sm")}>
+            <IconRefresh stroke={1.75} aria-hidden="true" />
+            Rescan
+          </button>
+        </div>
       </div>
 
-      <div role="tabpanel" id="view-panel" aria-labelledby={`view-${view}`} key={view} className="enter">
+      <div role="tabpanel" id="view-panel" aria-labelledby={`view-panel-tab-${view}`} key={view} className="fade-in">
         {view === "overview" ? (
           <Card className="overflow-hidden">
             <CardHeader
@@ -251,12 +241,59 @@ export function ResultView({ result, onRescan }: { result: ScanResult; onRescan:
   );
 }
 
-/** The two or three findings that moved the score most toward the verdict,
- * as short chips under the reason. */
-function TopReasons({ findings }: { findings: Finding[] }) {
-  const top = findings.filter((f) => f.weight > 0).slice(0, 3);
-  const reassuring = top.length ? [] : findings.filter((f) => f.weight < 0).slice(0, 3);
-  const list = top.length ? top : reassuring;
+/** The scanned link as text, never as a live link: a globe for the link
+ * itself (no favicon, which would make the browser contact the site), the
+ * landing page if it redirected, and a copy button. */
+function LinkBox({ url, finalUrl }: { url: string; finalUrl: string | null }) {
+  const [copied, setCopied] = useState(false);
+  return (
+    <div className="mt-auto flex items-start gap-2.5 rounded-[10px] border border-line bg-surface-2 py-2 pr-1.5 pl-3">
+      <IconWorld className="mt-[3px] size-4 shrink-0 text-muted" stroke={1.75} aria-hidden="true" />
+      <div className="min-w-0 flex-1 space-y-1 py-0.5 font-mono text-xs leading-5 text-fg-2">
+        <p className="break-all">{url}</p>
+        {finalUrl && (
+          <p className="flex items-start gap-1.5 break-all text-muted">
+            <IconCornerDownRight className="mt-[3px] size-3.5 shrink-0" stroke={1.75} aria-hidden="true" />
+            <span>
+              <span className="sr-only">Lands on </span>
+              {finalUrl}
+            </span>
+          </p>
+        )}
+      </div>
+      <button
+        type="button"
+        aria-label={copied ? "Link copied" : "Copy link"}
+        onClick={async () => {
+          try {
+            await navigator.clipboard.writeText(url);
+            setCopied(true);
+            setTimeout(() => setCopied(false), 1500);
+          } catch {
+            /* clipboard blocked */
+          }
+        }}
+        className="grid size-7 shrink-0 place-items-center rounded-lg text-muted transition-[color,background-color,transform] duration-150 hover:bg-surface hover:text-fg active:scale-[0.92]"
+      >
+        <IconSwap
+          show={copied ? "b" : "a"}
+          a={<IconCopy className="size-4" stroke={1.75} />}
+          b={<IconCheck className="size-4 text-ok" stroke={1.75} />}
+        />
+      </button>
+    </div>
+  );
+}
+
+/** The findings that pushed hardest toward the verdict, as chips under the
+ * reason: warning signs for a risky link, reassurances for a safe one. A
+ * safe link with a couple of minor flags should lead with why it's safe. */
+function TopReasons({ findings, verdict }: { findings: Finding[]; verdict: Verdict }) {
+  const towardRisk = verdict !== "safe";
+  const list = findings
+    .filter((f) => (towardRisk ? f.weight > 0 : f.weight < 0))
+    .sort((x, y) => Math.abs(y.weight) - Math.abs(x.weight))
+    .slice(0, 3);
   if (!list.length) return null;
   return (
     <ul className="flex flex-wrap gap-1.5" aria-label="Main reasons">
@@ -281,7 +318,7 @@ function RiskMeter({ risk, tone }: { risk: number; tone: Tone }) {
     <div aria-hidden="true">
       <div className="relative h-1.5 overflow-hidden rounded-full bg-fg/[0.08]">
         <div
-          className={cx("absolute inset-y-0 left-0 rounded-full transition-[width] duration-700 ease-[var(--ease-out)]", TONE_BG[tone])}
+          className={cx("grow-x absolute inset-y-0 left-0 rounded-full", TONE_BG[tone])}
           style={{ width: `${Math.max(2, risk)}%` }}
         />
         <span className="absolute inset-y-0 left-[40%] w-0.5 bg-surface" />
@@ -339,7 +376,7 @@ function Findings({ findings }: { findings: Finding[] }) {
               aria-label={f.title}
               inert={!expanded}
               className={cx(
-                "grid transition-[grid-template-rows,opacity] duration-300 ease-[var(--ease-out)]",
+                "grid transition-[grid-template-rows,opacity] duration-250 ease-[var(--ease-out)]",
                 expanded ? "grid-rows-[1fr] opacity-100" : "grid-rows-[0fr] opacity-0",
               )}
             >

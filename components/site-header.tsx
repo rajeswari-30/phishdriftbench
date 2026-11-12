@@ -69,7 +69,7 @@ export function SiteHeader({ github }: { github: string }) {
   return (
     <div
       className={cx(
-        "sticky top-0 z-50 px-3 pt-3 transition-transform duration-300 ease-[var(--ease-out)] sm:px-4",
+        "sticky top-0 z-50 px-3 pt-3 transition-transform duration-300 ease-[var(--ease-drawer)] sm:px-4",
         hidden && !open && "-translate-y-[calc(100%+12px)]",
       )}
       onFocusCapture={() => setHidden(false)}
@@ -99,8 +99,8 @@ export function SiteHeader({ github }: { github: string }) {
             {pill && (
               <span
                 aria-hidden="true"
-                className="absolute top-0.5 bottom-0.5 rounded-full bg-surface shadow-[0_0_0_1px_oklch(0%_0_0/0.08)] transition-all duration-300 ease-[var(--ease-out)]"
-                style={{ left: pill.left, width: pill.width }}
+                className="absolute top-0.5 bottom-0.5 left-0 rounded-full bg-surface shadow-[0_0_0_1px_oklch(0%_0_0/0.08)] transition-[transform,width] duration-250 ease-[var(--ease-out)]"
+                style={{ transform: `translateX(${pill.left}px)`, width: pill.width }}
               />
             )}
             {LINKS.map((l) => (

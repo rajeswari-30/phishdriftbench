@@ -20,7 +20,7 @@ const CHECKS = [
 export default function Home() {
   return (
     <div className="mx-auto max-w-6xl px-4 pt-10 pb-24 sm:px-6 sm:pt-16">
-      <div className="enter mx-auto mb-8 max-w-3xl text-center">
+      <div className="stagger mx-auto mb-8 max-w-3xl text-center">
         <h1 className="text-4xl font-semibold tracking-[-0.04em] text-balance sm:text-6xl">Check any link.</h1>
         <ul className="mt-5 flex flex-wrap justify-center gap-1.5" aria-label="What a scan checks">
           {CHECKS.map(({ label, Icon }) => (

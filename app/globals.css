@@ -48,7 +48,13 @@
   --font-sans: var(--font-inter), ui-sans-serif, system-ui, sans-serif;
   --font-mono: var(--font-geist-mono), ui-monospace, SFMono-Regular, Menlo, monospace;
   --shadow-card: var(--shadow);
-  --ease-out: cubic-bezier(0.22, 1, 0.36, 1);
+  /* Motion: strong custom curves (the built-in ones are too weak).
+     ease-out for anything entering or responding, ease-in-out for things
+     moving on screen, the drawer curve for the header, a mild overshoot
+     only for small playful parts (switch knob, check mark). */
+  --ease-out: cubic-bezier(0.23, 1, 0.32, 1);
+  --ease-in-out: cubic-bezier(0.77, 0, 0.175, 1);
+  --ease-drawer: cubic-bezier(0.32, 0.72, 0, 1);
   --ease-spring: cubic-bezier(0.34, 1.45, 0.64, 1);
 }
 
@@ -97,29 +103,53 @@ body {
   }
 }
 
-/* Entrances: a short rise with a blur that clears, spring-eased. */
+/* ---- Motion -------------------------------------------------------------
+   Only transform, opacity and (lightly) filter animate, so everything runs
+   on the compositor. UI motion stays under 300 ms; the few longer ones are
+   rare, one-off moments (the score rolling in, the meter filling). */
+
 @keyframes enter {
   from {
     opacity: 0;
     transform: translateY(6px);
-    filter: blur(4px);
+    filter: blur(2px);
+  }
+}
+@keyframes fade {
+  from {
+    opacity: 0;
+  }
+}
+@keyframes menu-in {
+  from {
+    opacity: 0;
+    transform: scale(0.96) translateY(-2px);
   }
 }
 @keyframes pop {
-  0% {
-    transform: scale(0.6);
+  from {
+    transform: scale(0.85);
     opacity: 0;
-  }
-  60% {
-    transform: scale(1.09);
-    opacity: 1;
   }
 }
 @keyframes digit {
   from {
     opacity: 0;
-    transform: translateY(8px);
+    transform: translateY(0.35em);
     filter: blur(2px);
+  }
+}
+@keyframes grow-x {
+  from {
+    transform: scaleX(0);
+  }
+}
+@keyframes sweep {
+  from {
+    transform: translateX(-100%);
+  }
+  to {
+    transform: translateX(100%);
   }
 }
 @keyframes shimmer {
@@ -131,15 +161,45 @@ body {
   }
 }
 
+/* Entering content: a short rise whose blur clears, 300 ms. */
 .enter {
-  animation: enter 420ms var(--ease-out) both;
+  animation: enter 300ms var(--ease-out) both;
+}
+/* Content swapping in place (tab panels): fade only, it happens often. */
+.fade-in {
+  animation: fade 180ms var(--ease-out) both;
+}
+/* Popovers scale from their trigger, not from their centre. */
+.menu-in {
+  transform-origin: top right;
+  animation: menu-in 160ms var(--ease-out) both;
 }
 .pop {
-  animation: pop 320ms var(--ease-spring) both;
+  animation: pop 220ms var(--ease-spring) both;
 }
 .digit {
   display: inline-block;
-  animation: digit 500ms var(--ease-spring) both;
+  animation: digit 420ms var(--ease-out) both;
+}
+.grow-x {
+  transform-origin: left center;
+  animation: grow-x 700ms var(--ease-out) 120ms both;
+}
+/* Children enter one after another, 50 ms apart. */
+.stagger > * {
+  animation: enter 300ms var(--ease-out) both;
+}
+.stagger > :nth-child(2) {
+  animation-delay: 50ms;
+}
+.stagger > :nth-child(3) {
+  animation-delay: 100ms;
+}
+.stagger > :nth-child(4) {
+  animation-delay: 150ms;
+}
+.stagger > :nth-child(5) {
+  animation-delay: 200ms;
 }
 .shimmer {
   background: linear-gradient(90deg, var(--fg-2) 0%, var(--fg-2) 40%, var(--faint) 50%, var(--fg-2) 60%, var(--fg-2) 100%);
@@ -147,8 +207,27 @@ body {
   -webkit-background-clip: text;
   background-clip: text;
   color: transparent;
-  animation: shimmer 2.2s linear infinite;
+  animation: shimmer 2s linear infinite;
 }
+
+/* Skeleton blocks: a flat tone with a highlight sweeping across. The sweep
+   is a transformed pseudo-element, not an animated background, so it stays
+   on the compositor. */
+.skeleton {
+  position: relative;
+  overflow: hidden;
+  border-radius: 6px;
+  background: oklch(14.5% 0 0 / 0.06);
+}
+.skeleton::after {
+  content: "";
+  position: absolute;
+  inset: 0;
+  transform: translateX(-100%);
+  background: linear-gradient(90deg, transparent, oklch(100% 0 0 / 0.65), transparent);
+  animation: sweep 1.4s var(--ease-in-out) infinite;
+}
+
 .no-scrollbar {
   scrollbar-width: none;
 }
@@ -156,21 +235,31 @@ body {
   display: none;
 }
 
+/* Reduced motion: fewer and gentler, not none. Fades stay because they
+   carry meaning; anything that moves or sweeps goes. */
 @media (prefers-reduced-motion: reduce) {
   .enter,
-  .pop,
-  .digit {
+  .stagger > *,
+  .menu-in,
+  .pop {
+    animation: fade 180ms ease both;
+  }
+  .digit,
+  .grow-x {
+    animation: none;
+  }
+  .skeleton::after,
+  .shimmer {
     animation: none;
   }
   .shimmer {
-    animation: none;
     color: var(--fg-2);
     background: none;
   }
   *,
   *::before,
   *::after {
-    transition-duration: 1ms !important;
+    transition-property: opacity, color, background-color, border-color, box-shadow !important;
   }
 }
 

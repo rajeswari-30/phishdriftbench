@@ -159,3 +159,21 @@ export function RollingNumber({ value, className }: { value: number | string; cl
     </span>
   );
 }
+
+/** Two icons stacked in one slot; switching cross-fades them with a little
+ * scale and blur, so a copy icon becoming a check reads as one object
+ * changing rather than two swapping. */
+export function IconSwap({ show, a, b, className }: { show: "a" | "b"; a: ReactNode; b: ReactNode; className?: string }) {
+  const layer = "col-start-1 row-start-1 transition-[opacity,transform,filter] duration-200 ease-[var(--ease-out)]";
+  return (
+    <span className={cx("grid place-items-center", className)} aria-hidden="true">
+      <span className={cx(layer, show === "a" ? "scale-100 opacity-100 blur-0" : "scale-75 opacity-0 blur-[2px]")}>{a}</span>
+      <span className={cx(layer, show === "b" ? "scale-100 opacity-100 blur-0" : "scale-75 opacity-0 blur-[2px]")}>{b}</span>
+    </span>
+  );
+}
+
+/** One skeleton block. Size it exactly like the thing it stands in for. */
+export function Skel({ className }: { className?: string }) {
+  return <span aria-hidden="true" className={cx("skeleton block", className)} />;
+}

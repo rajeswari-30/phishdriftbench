@@ -13,7 +13,7 @@ import {
 } from "@tabler/icons-react";
 import { useEffect, useRef, useState } from "react";
 import type { TocItem } from "@/lib/docs";
-import { cx } from "./ui";
+import { cx, IconSwap } from "./ui";
 
 /** "Copy page" split button: one click copies the docs as Markdown; the
  * menu opens the same text for an agent or in an AI assistant. */
@@ -60,7 +60,11 @@ export function CopyPage({ markdown, page }: { markdown: string; page: string })
         onClick={copy}
         className="inline-flex h-8 items-center gap-1.5 rounded-l-[10px] bg-surface pr-2.5 pl-3 text-[13.5px] shadow-[0_0_0_1px_oklch(0%_0_0/0.09),0_1px_0_oklch(0%_0_0/0.06)] transition-colors hover:bg-surface-2"
       >
-        {copied ? <IconCheck className="size-4 text-ok" stroke={1.75} aria-hidden="true" /> : <IconCopy className="size-4" stroke={1.75} aria-hidden="true" />}
+        <IconSwap
+          show={copied ? "b" : "a"}
+          a={<IconCopy className="size-4" stroke={1.75} />}
+          b={<IconCheck className="size-4 text-ok" stroke={1.75} />}
+        />
         {copied ? "Copied" : "Copy page"}
       </button>
       <button
@@ -75,7 +79,7 @@ export function CopyPage({ markdown, page }: { markdown: string; page: string })
       {open && (
         <div
           role="menu"
-          className="enter absolute top-10 right-0 z-30 w-64 rounded-2xl border border-line-2 bg-surface p-1.5 shadow-[0_12px_32px_-12px_oklch(0%_0_0/0.18)]"
+          className="menu-in absolute top-10 right-0 z-30 w-64 rounded-2xl border border-line-2 bg-surface p-1.5 shadow-[0_12px_32px_-12px_oklch(0%_0_0/0.18)]"
         >
           <button type="button" role="menuitem" className={item} onClick={() => (copy(), setOpen(false))}>
             <IconMarkdown stroke={1.75} aria-hidden="true" />
