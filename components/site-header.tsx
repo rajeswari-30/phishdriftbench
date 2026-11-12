@@ -1,6 +1,6 @@
 "use client";
 
-import { IconArrowUpRight, IconBrandGithub, IconChevronRight } from "@tabler/icons-react";
+import { IconArrowUpRight, IconBrandGithubFilled, IconChevronRight } from "@tabler/icons-react";
 import Link from "next/link";
 import { usePathname } from "next/navigation";
 import { useEffect, useLayoutEffect, useRef, useState } from "react";
@@ -124,7 +124,7 @@ export function SiteHeader({ github }: { github: string }) {
 
           <div className="ml-auto flex items-center gap-1.5 md:ml-0">
             <a href={github} target="_blank" rel="noopener noreferrer" className={cx(pillClass("primary", "sm"), "max-sm:hidden")}>
-              <IconBrandGithub stroke={1.75} aria-hidden="true" />
+              <IconBrandGithubFilled aria-hidden="true" />
               GitHub
             </a>
             <button
@@ -174,7 +174,10 @@ export function SiteHeader({ github }: { github: string }) {
                   tabIndex={open ? 0 : -1}
                   className="flex items-center justify-between rounded-2xl px-3 py-2.5 text-[15px] text-fg-2 transition-colors hover:bg-surface-2"
                 >
-                  GitHub
+                  <span className="flex items-center gap-2">
+                    <IconBrandGithubFilled className="size-4" aria-hidden="true" />
+                    GitHub
+                  </span>
                   <IconArrowUpRight className="size-4 text-faint" stroke={1.75} aria-hidden="true" />
                 </a>
               </li>

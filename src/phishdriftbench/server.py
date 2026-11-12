@@ -23,6 +23,7 @@ from pydantic import BaseModel, Field
 
 from phishdriftbench.demo import model as url_model
 from phishdriftbench.demo import report as report_pdf
+from phishdriftbench.demo import scan_report
 from phishdriftbench.demo import trust
 from phishdriftbench.scan import engine, judge, netsafe
 
@@ -116,7 +117,7 @@ def check(body: ScanRequest, request: Request) -> dict:
 def report(request: Request, url: str = Query(min_length=1, max_length=4096), download: bool = False) -> Response:
     _rate_limit(request)
     result = _scan_or_400(url, True)  # the scan cache makes the usual scan-then-report pair cost one scan
-    pdf = report_pdf.build_scan_report_pdf(result)
+    pdf = scan_report.build_scan_report_pdf(result)
     name = report_pdf.report_filename(result["url"])
     return Response(pdf, media_type="application/pdf", headers={
         "Content-Disposition": f'{"attachment" if download else "inline"}; filename="{name}"',

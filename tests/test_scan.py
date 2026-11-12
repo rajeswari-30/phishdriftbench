@@ -142,3 +142,44 @@ def test_scan_rejects_what_it_must_not_scan(client, url, fragment):
 def test_check_endpoint_is_offline_url_model(client):
     body = client.post("/api/check", json={"url": "https://xn--pple-43d.com"}).json()
     assert body["verdict"] == "PHISHING"
+
+
+# ---- PDF report ----------------------------------------------------------------------
+
+def _scan_fixture(verdict="phishing", risk=98):
+    return {
+        "id": "test123", "url": "https://xn--pple-43d.com", "final_url": "https://xn--pple-43d.com",
+        "risk": risk, "verdict": verdict, "evidence": "moderate", "elapsed_ms": 900,
+        "summary": "Very likely phishing. Look-alike characters in the domain.",
+        "findings": [
+            {"id": "homograph", "category": "url", "severity": "critical", "weight": 6.0,
+             "title": "Look-alike characters in the domain",
+             "detail": "аpple.com is written with look-alike characters from another alphabet"},
+            {"id": "intel_clean", "category": "intel", "severity": "good", "weight": -0.2,
+             "title": "Not on known-threat lists", "detail": "Checked OpenPhish."},
+        ],
+        "domain": {"domain": "xn--pple-43d.com", "age_days": None, "hosted_platform": False},
+        "page": None, "intel": [{"source": "OpenPhish", "status": "clean", "detail": None}],
+        "url_model": {"ml_score": 0.04, "decision_threshold": 0.079, "signals": []},
+    }
+
+
+def test_scan_report_renders_with_bundled_fonts():
+    """Fonts ship in the package (matplotlib is not installed on Vercel), and
+    the homograph's Cyrillic 'а' must survive into the PDF text uncapitalised."""
+    from phishdriftbench.demo import scan_report
+    pdf = scan_report.build_scan_report_pdf(_scan_fixture())
+    assert pdf.startswith(b"%PDF") and len(pdf) > 5_000
+
+
+@pytest.mark.parametrize("verdict", ["phishing", "suspicious", "safe"])
+def test_scan_report_handles_every_verdict(verdict):
+    from phishdriftbench.demo import scan_report
+    assert scan_report.build_scan_report_pdf(_scan_fixture(verdict, 50)).startswith(b"%PDF")
+
+
+def test_report_sentence_keeps_domains_as_written():
+    from phishdriftbench.demo.scan_report import _sentence
+    assert _sentence("аpple.com is a look-alike") == "аpple.com is a look-alike."
+    assert _sentence("github.com has been registered") == "github.com has been registered."
+    assert _sentence("this exact link is listed") == "This exact link is listed."

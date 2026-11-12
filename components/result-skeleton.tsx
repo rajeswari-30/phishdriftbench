@@ -22,21 +22,27 @@ export function ResultSkeleton({ url, deep }: { url: string; deep: boolean }) {
   }, [url, steps.length]);
 
   return (
-    <section className="mt-8 space-y-4" aria-busy="true" aria-label="Scanning">
-      <p className="sr-only" role="status" aria-live="polite">
-        {steps[at]}
-      </p>
+    // The status line (20px + 16px gap) sits inside the result's 32px top
+    // margin, so the card below lands exactly where the real result card will.
+    <section className="-mt-1 space-y-4" aria-busy="true" aria-label="Scanning">
+      {/* One status line for the whole scan; everything below is pure placeholder. */}
+      <div className="flex h-5 items-center gap-2 px-1 text-[13px]" role="status" aria-live="polite">
+        <StatusIcon state="active" />
+        <span key={steps[at]} className="enter shimmer font-medium">
+          {steps[at]}
+        </span>
+        <span className="ml-auto font-mono text-xs text-muted tabular-nums">
+          {at + 1}/{steps.length}
+        </span>
+      </div>
 
       {/* Verdict card */}
       <Card className="enter overflow-hidden">
         <div className="grid lg:grid-cols-[300px_minmax(0,1fr)]">
           <div className="flex flex-col justify-center gap-4 border-b border-line bg-surface-2/60 p-5 sm:p-6 lg:border-r lg:border-b-0">
-            {/* Where the verdict will be: what's running right now. */}
-            <div className="flex h-[22px] items-center gap-2 text-[15px] font-medium">
-              <StatusIcon state="active" />
-              <span key={steps[at]} className="enter shimmer">
-                {steps[at]}
-              </span>
+            <div className="flex h-[22px] items-center gap-2">
+              <Skel className="size-5 rounded-full" />
+              <Skel className="h-4 w-24" />
             </div>
             <div className="flex items-end gap-2">
               <Skel className="h-[60px] w-28 rounded-lg" />
@@ -63,8 +69,10 @@ export function ResultSkeleton({ url, deep }: { url: string; deep: boolean }) {
             </div>
             <div className="mt-auto flex items-center gap-2.5 rounded-[10px] border border-line bg-surface-2 py-2 pr-1.5 pl-3">
               <Skel className="size-4 rounded-full" />
-              <p className="min-w-0 flex-1 truncate py-0.5 font-mono text-xs leading-5 text-muted">{url}</p>
-              <span className="size-7" />
+              <span className="flex h-6 min-w-0 flex-1 items-center">
+                <Skel className="h-3 w-2/3" />
+              </span>
+              <Skel className="size-7 rounded-lg" />
             </div>
           </div>
         </div>
