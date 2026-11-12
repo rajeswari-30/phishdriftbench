@@ -20,7 +20,7 @@ import {
   IconShieldCheck,
   IconShieldSearch,
   IconShieldX,
-  IconSparkles,
+  IconWand,
   IconTrendingDown,
   IconTrendingUp,
   IconWorld,
@@ -44,7 +44,7 @@ const CATEGORY_ICON: Record<Finding["category"], TablerIcon> = {
   domain: IconWorld,
   page: IconBrowser,
   intel: IconShieldSearch,
-  ai: IconSparkles,
+  ai: IconWand,
 };
 
 const SEVERITY: Record<Severity, { tone: Tone; label: string }> = {
