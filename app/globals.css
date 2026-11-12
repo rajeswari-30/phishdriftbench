@@ -1,0 +1,123 @@
+@import "tailwindcss";
+
+/* PhishLens tokens. Warm neutrals, one ink colour, and three verdict
+   colours that carry meaning and nothing else. */
+:root {
+  --paper: #fafaf9;
+  --paper-2: #f3f3f1;
+  --card: #ffffff;
+  --ink: #111110;
+  --ink-2: #3d3d3a;
+  --muted: #6f6e69;
+  --faint: #a3a29c;
+  --rule: #e7e6e2;
+  --rule-2: #d9d8d3;
+  --phish: #c2372b;
+  --phish-soft: #fdf1ef;
+  --phish-ink: #7a1f16;
+  --unsure: #a16a07;
+  --unsure-soft: #fcf6e8;
+  --unsure-ink: #5e4209;
+  --legit: #1d7d3f;
+  --legit-soft: #eff8f1;
+  --legit-ink: #14532b;
+  color-scheme: light;
+}
+
+@media (prefers-color-scheme: dark) {
+  :root {
+    --paper: #0e0e0d;
+    --paper-2: #171716;
+    --card: #141413;
+    --ink: #f2f1ee;
+    --ink-2: #cfcec9;
+    --muted: #9a9993;
+    --faint: #6b6a65;
+    --rule: #262624;
+    --rule-2: #34342f;
+    --phish: #ef6a5c;
+    --phish-soft: #2a1512;
+    --phish-ink: #f6b3aa;
+    --unsure: #e0a93a;
+    --unsure-soft: #261d0b;
+    --unsure-ink: #f0d39a;
+    --legit: #4cc27a;
+    --legit-soft: #0f2116;
+    --legit-ink: #a7e3bd;
+    color-scheme: dark;
+  }
+}
+
+@theme inline {
+  --color-paper: var(--paper);
+  --color-paper-2: var(--paper-2);
+  --color-card: var(--card);
+  --color-ink: var(--ink);
+  --color-ink-2: var(--ink-2);
+  --color-muted: var(--muted);
+  --color-faint: var(--faint);
+  --color-rule: var(--rule);
+  --color-rule-2: var(--rule-2);
+  --color-phish: var(--phish);
+  --color-phish-soft: var(--phish-soft);
+  --color-phish-ink: var(--phish-ink);
+  --color-unsure: var(--unsure);
+  --color-unsure-soft: var(--unsure-soft);
+  --color-unsure-ink: var(--unsure-ink);
+  --color-legit: var(--legit);
+  --color-legit-soft: var(--legit-soft);
+  --color-legit-ink: var(--legit-ink);
+  --font-sans: var(--font-geist-sans), ui-sans-serif, system-ui, sans-serif;
+  --font-mono: var(--font-geist-mono), ui-monospace, Menlo, monospace;
+  --ease-out-strong: cubic-bezier(0.23, 1, 0.32, 1);
+}
+
+html {
+  -webkit-text-size-adjust: 100%;
+}
+
+body {
+  background: var(--paper);
+  color: var(--ink);
+  font-family: var(--font-sans);
+  -webkit-font-smoothing: antialiased;
+  text-rendering: optimizeLegibility;
+}
+
+::selection {
+  background: var(--ink);
+  color: var(--paper);
+}
+
+:focus-visible {
+  outline: 2px solid var(--ink);
+  outline-offset: 2px;
+}
+
+@keyframes rise {
+  from {
+    opacity: 0;
+    transform: translateY(6px);
+  }
+}
+
+@keyframes fade {
+  from {
+    opacity: 0;
+  }
+}
+
+.rise {
+  animation: rise 320ms var(--ease-out-strong) both;
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .rise {
+    animation: fade 200ms ease both;
+  }
+  *,
+  *::before,
+  *::after {
+    transition-duration: 1ms !important;
+  }
+}

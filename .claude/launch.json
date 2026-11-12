@@ -2,14 +2,16 @@
   "version": "0.0.1",
   "configurations": [
     {
-      "name": "phish-demo-webapp",
-      "runtimeExecutable": "Base Papers/.venv/Scripts/python.exe",
-      "runtimeArgs": ["webapp/app.py"],
-      "port": 5001
+      "name": "phishlens-api",
+      "runtimeExecutable": ".venv/bin/uvicorn",
+      "runtimeArgs": ["phishdriftbench.server:app", "--app-dir", "src", "--port", "8000"],
+      "port": 8000
     },
     {
-      "name": "overleaf-file-server",
-      "url": "http://localhost:8934"
+      "name": "phishlens-web",
+      "runtimeExecutable": "npm",
+      "runtimeArgs": ["run", "dev"],
+      "port": 3000
     }
   ]
 }
