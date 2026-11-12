@@ -126,7 +126,13 @@ limiting in front.
 | `GET /api/report?url=...&download=true` | PDF report of a full scan |
 | `GET /api/health` | Which sources are configured |
 
-Interactive docs at `/api/docs`. Example response, trimmed:
+Interactive docs at `/api/docs`. For AI agents, `/llms.txt` indexes the docs, `/llms-full.txt`
+has all of them as Markdown, and `/md/how-it-works` and `/md/research` serve each page. Every docs
+page also has a **Copy page** menu that copies it as Markdown or opens it in Claude or ChatGPT.
+The docs are written once, in `content/*.md`, and the page, the Markdown routes and the llms files
+all read from there.
+
+Example response, trimmed:
 
 ```json
 {
@@ -160,7 +166,8 @@ The browser extension in [`extension/`](extension/README.md) uses the same API.
 ## Project layout
 
 ```
-app/, components/, lib/     Next.js frontend (App Router, Tailwind)
+app/, components/, lib/     Next.js frontend (App Router, Tailwind, Tabler icons, zod)
+content/                    docs pages as Markdown (How it works, Research)
 api/index.py                Vercel entry point → src/phishdriftbench/server.py
 src/phishdriftbench/
   server.py                 FastAPI app
