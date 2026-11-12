@@ -3,71 +3,41 @@ const urlInput = document.getElementById("url");
 const checkBtn = document.getElementById("checkBtn");
 const checkTabBtn = document.getElementById("checkTabBtn");
 const resultDiv = document.getElementById("result");
+const serverInput = document.getElementById("server");
+
+const LABEL = { phishing: "Phishing", suspicious: "Suspicious", safe: "Looks safe" };
 
 function esc(s) {
-  return String(s).replace(/[&<>"]/g, (c) => ({ "&": "&amp;", "<": "&lt;", ">": "&gt;", '"': "&quot;" }[c]));
-}
-
-function askBackground(url) {
-  return new Promise((resolve) => {
-    chrome.runtime.sendMessage({ type: "CHECK_URL", url }, resolve);
-  });
+  return String(s).replace(/[&<>"]/g, (c) => ({ "&": "&amp;", "<": "&lt;", ">": "&gt;", '"': "&quot;" })[c]);
 }
 
 function render(data, { stale = false } = {}) {
-  if (data.error) {
-    resultDiv.innerHTML = `<p class="error">${esc(data.error)}</p>`;
-    return;
-  }
-  const cls =
-    data.verdict === "PHISHING" ? "phishing" : data.verdict === "UNCERTAIN" ? "uncertain" : "legitimate";
-
+  const cls = data.verdict in LABEL ? data.verdict : "suspicious";
   let html = `<div class="verdict-row">
-    <span class="verdict ${cls}">${esc(data.verdict)}</span>`;
-  if (!data.abstained) {
-    html += `<span class="conf">${(data.confidence * 100).toFixed(1)}%</span>`;
-  }
-  html += `</div><div class="checked-url">${esc(data.url)}</div>`;
-
-  if (data.abstained) {
-    html += `<div class="abstain"><strong>No verdict:</strong> ${esc(data.abstain_reason)}.</div>`;
-  }
-
-  if (data.squatting_reasons && data.squatting_reasons.length) {
-    html += `<div class="sect">Brand-jacking screen</div><ul>`;
-    data.squatting_reasons.forEach((r) => (html += `<li>${esc(r)}</li>`));
+      <span class="verdict ${cls}">${esc(LABEL[cls])}</span>
+      <span class="conf">${esc(data.risk)}/100</span>
+    </div>
+    <div class="checked-url">${esc(data.url)}</div>
+    <p class="summary">${esc(data.summary || "")}</p>`;
+  const top = (data.findings || []).filter((f) => f.weight > 0).slice(0, 4);
+  if (top.length) {
+    html += `<div class="sect">Why</div><ul>`;
+    top.forEach((f) => (html += `<li>${esc(f.title)}</li>`));
     html += `</ul>`;
   }
-
-  if (data.top_reasons && data.top_reasons.length) {
-    html += `<div class="sect">Top factors</div><ul>`;
-    data.top_reasons.slice(0, 3).forEach((r) => (html += `<li>${esc(r)}</li>`));
-    html += `</ul>`;
-  }
-
-  if (stale) html += `<span class="stale">from your last check</span>`;
+  if (stale) html += `<span class="stale">from your last scan</span>`;
   resultDiv.innerHTML = html;
-}
-
-function renderConnectionError() {
-  resultDiv.innerHTML = `<p class="error">Can't reach PhishLens.<br>
-    Make sure the local server is running:<br>
-    <code>python webapp/app.py</code></p>`;
 }
 
 async function runCheck(url) {
   if (!url) return;
-  checkBtn.disabled = true;
-  checkTabBtn.disabled = true;
-  resultDiv.innerHTML = `<p class="muted">Checking…</p>`;
-  const res = await askBackground(url);
-  if (res && res.ok) {
-    render(res.data);
-  } else {
-    renderConnectionError();
-  }
-  checkBtn.disabled = false;
-  checkTabBtn.disabled = false;
+  checkBtn.disabled = checkTabBtn.disabled = true;
+  resultDiv.innerHTML = `<p class="muted">Scanning…</p>`;
+  const res = await new Promise((resolve) => chrome.runtime.sendMessage({ type: "SCAN_URL", url }, resolve));
+  if (res && res.ok) render(res.data);
+  else resultDiv.innerHTML = `<p class="error">${esc((res && res.error) || "PhishLens is unreachable.")}<br>
+      Check the server address below.</p>`;
+  checkBtn.disabled = checkTabBtn.disabled = false;
 }
 
 form.addEventListener("submit", (e) => {
@@ -83,8 +53,13 @@ checkTabBtn.addEventListener("click", async () => {
   }
 });
 
-// On open, show the last result from a right-click check, if any, so the
-// popup isn't empty the moment after you've just checked a link.
+chrome.storage.sync.get("apiBase", ({ apiBase }) => {
+  serverInput.value = apiBase || "http://localhost:3000";
+});
+serverInput.addEventListener("change", () => {
+  chrome.storage.sync.set({ apiBase: serverInput.value.trim() });
+});
+
 chrome.storage.local.get("lastResult", ({ lastResult }) => {
-  if (lastResult) render(lastResult, { stale: true });
+  if (lastResult && lastResult.verdict in LABEL) render(lastResult, { stale: true });
 });

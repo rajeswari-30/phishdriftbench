@@ -1,8 +1,8 @@
 {
   "manifest_version": 3,
-  "name": "PhishLens — URL Phishing Checker",
-  "version": "1.0.0",
-  "description": "Lightweight, explainable phishing URL detection. Right-click any link to check it, or open the popup to check the current page.",
+  "name": "PhishLens: phishing link scanner",
+  "version": "2.0.0",
+  "description": "Scan any link for phishing: threat lists, domain age, a safe read of the page, and an explainable risk score.",
   "icons": {
     "16": "icons/icon16.png",
     "32": "icons/icon32.png",
@@ -22,9 +22,18 @@
   "background": {
     "service_worker": "background.js"
   },
-  "permissions": ["contextMenus", "activeTab", "storage", "notifications", "tabs"],
+  "permissions": [
+    "contextMenus",
+    "activeTab",
+    "storage",
+    "notifications"
+  ],
   "host_permissions": [
-    "http://127.0.0.1:5001/*",
-    "http://localhost:5001/*"
+    "http://localhost/*",
+    "http://127.0.0.1/*",
+    "https://*.vercel.app/*"
+  ],
+  "optional_host_permissions": [
+    "https://*/*"
   ]
 }

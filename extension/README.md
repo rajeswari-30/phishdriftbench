@@ -1,60 +1,30 @@
 # PhishLens browser extension
 
-A thin client for your existing PhishLens website (`webapp/app.py`). It does
-not run any model logic itself — it calls the same `/api/check` endpoint the
-browser page already uses, running locally at `http://127.0.0.1:5001`.
+A thin client for a PhishLens deployment. It calls the same `POST /api/scan` endpoint the website
+uses and holds no model logic of its own.
 
-**Why this still keeps the "nothing is fetched or sent anywhere" promise:**
-the server stays on `127.0.0.1` (loopback) — a checked URL never leaves this
-machine. That is a deliberate design choice, not an afterthought: the
-alternative (porting the model to JavaScript so the extension needs no
-server at all) is the *more* private option long-term, but this is the
-fast, honest path that reuses everything already built and verified.
+## Install (Chrome, Edge, Brave or any Chromium browser)
 
-## Requirements
+1. Open `chrome://extensions` and turn on **Developer mode**.
+2. Click **Load unpacked** and select this `extension/` folder.
+3. Open the PhishLens popup and set **Server** to your deployment, e.g.
+   `https://your-app.vercel.app`, or leave the default `http://localhost:3000` for local
+   development (`npm run dev` plus `npm run dev:api`).
 
-The local PhishLens server must be running for the extension to work:
+`*.vercel.app` and localhost are allowed out of the box. A custom domain needs the optional
+`https://*/*` host permission, which Chrome asks for once.
 
-```bash
-python webapp/app.py
-```
+## Use
 
-Leave that running in a terminal. The extension has no model of its own —
-if the server isn't up, it will tell you plainly rather than fail silently.
+- **Right-click any link → "Scan this link with PhishLens".** A notification shows the verdict
+  and risk score, and the toolbar badge turns red (phishing), amber (suspicious) or green.
+- **Click the toolbar icon** to paste a link or scan the current tab.
 
-## Installing (Chrome / Edge / Brave — any Chromium browser)
-
-1. Open `chrome://extensions` (or `edge://extensions`)
-2. Turn on **Developer mode** (top-right toggle)
-3. Click **Load unpacked**
-4. Select this `extension/` folder
-5. The PhishLens icon appears in your toolbar
-
-This is a manual, one-time step you do yourself — Chrome's file picker for
-"Load unpacked" can't be driven by an automated tool.
-
-## Using it
-
-- **Right-click any link on any page** → "Check this link with PhishLens".
-  A notification pops up with the verdict, and the toolbar badge shows a
-  colored result (red = phishing, green = legitimate, orange = uncertain).
-- **Click the toolbar icon** to open the popup: paste any URL, or click
-  "Check current page" to check the tab you're on right now.
-
-## What it can and can't see
-
-A browser extension can only see links **inside the browser** — any
-website, WhatsApp Web, Gmail, etc. It cannot see a link inside the native
-WhatsApp mobile app on a phone, because that isn't a webpage the extension
-has access to. Phone-side protection would need a different delivery
-mechanism (e.g. an Android "Share to PhishLens" target), not a browser
-extension.
-
-## Files
+The extension only sees links inside the browser. It can't see links in native apps.
 
 | File | Purpose |
 |---|---|
-| `manifest.json` | Manifest V3 config — permissions, icons, entry points |
-| `background.js` | Service worker: right-click menu, API calls, badge/notification |
-| `popup.html` / `popup.js` | The toolbar popup UI |
-| `icons/` | Extension icons (same logo as the website), generated at 16/32/48/128px |
+| `manifest.json` | Manifest V3 config |
+| `background.js` | Right-click menu, API calls, badge and notification |
+| `popup.html` / `popup.js` | Toolbar popup and the server setting |
+| `icons/` | Extension icons |
