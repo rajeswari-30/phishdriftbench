@@ -1,0 +1,425 @@
+@import "tailwindcss";
+
+/* PhishLens tokens: neutral oklch greys, hairline borders, soft raised
+   cards, and three status colours that only ever mean a verdict. Light
+   theme only. */
+:root {
+  --bg: oklch(98.5% 0 0);
+  --surface: oklch(100% 0 0);
+  --surface-2: oklch(97% 0 0);
+  --surface-3: oklch(94.5% 0 0);
+  --fg: oklch(14.5% 0 0);
+  --fg-2: oklch(32% 0 0);
+  --muted: oklch(55.6% 0 0);
+  --faint: oklch(62% 0 0);
+  --line: oklch(14.5% 0 0 / 0.08);
+  --line-2: oklch(14.5% 0 0 / 0.14);
+  --pill: oklch(20.5% 0 0);
+  --pill-fg: oklch(98.5% 0 0);
+  --danger: oklch(55% 0.2 27);
+  --warn: oklch(58% 0.14 70);
+  --ok: oklch(52% 0.13 152);
+  --accent: oklch(54% 0.22 285);
+  --accent-2: oklch(47% 0.23 285);
+  --accent-soft: oklch(96% 0.03 285);
+  --shadow: 0 1px 0 oklch(0% 0 0 / 0.03);
+  color-scheme: light;
+}
+
+@theme inline {
+  --color-bg: var(--bg);
+  --color-surface: var(--surface);
+  --color-surface-2: var(--surface-2);
+  --color-surface-3: var(--surface-3);
+  --color-fg: var(--fg);
+  --color-fg-2: var(--fg-2);
+  --color-muted: var(--muted);
+  --color-faint: var(--faint);
+  --color-line: var(--line);
+  --color-line-2: var(--line-2);
+  --color-pill: var(--pill);
+  --color-pill-fg: var(--pill-fg);
+  --color-danger: var(--danger);
+  --color-warn: var(--warn);
+  --color-ok: var(--ok);
+  --color-accent: var(--accent);
+  --color-accent-2: var(--accent-2);
+  --color-accent-soft: var(--accent-soft);
+  --font-sans: var(--font-inter), ui-sans-serif, system-ui, sans-serif;
+  --font-mono: var(--font-geist-mono), ui-monospace, SFMono-Regular, Menlo, monospace;
+  --shadow-card: var(--shadow);
+  /* Motion: strong custom curves (the built-in ones are too weak).
+     ease-out for anything entering or responding, ease-in-out for things
+     moving on screen, the drawer curve for the header, a mild overshoot
+     only for small playful parts (switch knob, check mark). */
+  --ease-out: cubic-bezier(0.23, 1, 0.32, 1);
+  --ease-in-out: cubic-bezier(0.77, 0, 0.175, 1);
+  --ease-drawer: cubic-bezier(0.32, 0.72, 0, 1);
+  --ease-spring: cubic-bezier(0.34, 1.45, 0.64, 1);
+}
+
+html {
+  -webkit-text-size-adjust: 100%;
+}
+
+body {
+  /* A faint violet wash at the top of every page. */
+  background:
+    radial-gradient(120% 60% at 50% -10%, oklch(54% 0.22 285 / 0.09), transparent 60%),
+    var(--bg);
+  background-repeat: no-repeat;
+  color: var(--fg);
+  font-family: var(--font-sans);
+  font-feature-settings: "cv11", "ss01";
+  -webkit-font-smoothing: antialiased;
+  text-rendering: optimizeLegibility;
+}
+
+::selection {
+  background: oklch(54% 0.22 285 / 0.2);
+  color: var(--fg);
+}
+
+/* In the base layer so a utility (e.g. focus-visible:outline-none) can
+   override it; unlayered CSS would beat every Tailwind utility. */
+@layer base {
+  /* Tailwind's reset leaves buttons with the arrow cursor. */
+  button:not(:disabled),
+  [role="button"],
+  [role="switch"],
+  [role="tab"],
+  [role="menuitem"],
+  summary,
+  label[for],
+  select {
+    cursor: pointer;
+  }
+  :disabled {
+    cursor: not-allowed;
+  }
+  :focus-visible {
+    outline: 2px solid var(--accent);
+    outline-offset: 2px;
+  }
+}
+
+/* ---- Motion -------------------------------------------------------------
+   Only transform, opacity and (lightly) filter animate, so everything runs
+   on the compositor. UI motion stays under 300 ms; the few longer ones are
+   rare, one-off moments (the score rolling in, the meter filling). */
+
+@keyframes enter {
+  from {
+    opacity: 0;
+    transform: translateY(6px);
+    filter: blur(2px);
+  }
+}
+@keyframes fade {
+  from {
+    opacity: 0;
+  }
+}
+@keyframes menu-in {
+  from {
+    opacity: 0;
+    transform: scale(0.96) translateY(-2px);
+  }
+}
+@keyframes pop {
+  from {
+    transform: scale(0.85);
+    opacity: 0;
+  }
+}
+@keyframes digit {
+  from {
+    opacity: 0;
+    transform: translateY(0.35em);
+    filter: blur(2px);
+  }
+}
+@keyframes grow-x {
+  from {
+    transform: scaleX(0);
+  }
+}
+@keyframes sweep {
+  from {
+    transform: translateX(-100%);
+  }
+  to {
+    transform: translateX(100%);
+  }
+}
+@keyframes shimmer {
+  from {
+    background-position: 200% 0;
+  }
+  to {
+    background-position: -200% 0;
+  }
+}
+
+/* Entering content: a short rise whose blur clears, 300 ms. */
+.enter {
+  animation: enter 300ms var(--ease-out) both;
+}
+/* Content swapping in place (tab panels): fade only, it happens often. */
+.fade-in {
+  animation: fade 180ms var(--ease-out) both;
+}
+/* Popovers scale from their trigger, not from their centre. */
+.menu-in {
+  transform-origin: top right;
+  animation: menu-in 160ms var(--ease-out) both;
+}
+.pop {
+  animation: pop 220ms var(--ease-spring) both;
+}
+.digit {
+  display: inline-block;
+  animation: digit 420ms var(--ease-out) both;
+}
+.grow-x {
+  transform-origin: left center;
+  animation: grow-x 700ms var(--ease-out) 120ms both;
+}
+/* Children enter one after another, 50 ms apart. */
+.stagger > * {
+  animation: enter 300ms var(--ease-out) both;
+}
+.stagger > :nth-child(2) {
+  animation-delay: 50ms;
+}
+.stagger > :nth-child(3) {
+  animation-delay: 100ms;
+}
+.stagger > :nth-child(4) {
+  animation-delay: 150ms;
+}
+.stagger > :nth-child(5) {
+  animation-delay: 200ms;
+}
+.shimmer {
+  background: linear-gradient(90deg, var(--fg-2) 0%, var(--fg-2) 40%, var(--faint) 50%, var(--fg-2) 60%, var(--fg-2) 100%);
+  background-size: 200% 100%;
+  -webkit-background-clip: text;
+  background-clip: text;
+  color: transparent;
+  animation: shimmer 2s linear infinite;
+}
+
+/* Skeleton blocks: a flat tone with a highlight sweeping across. The sweep
+   is a transformed pseudo-element, not an animated background, so it stays
+   on the compositor. */
+.skeleton {
+  position: relative;
+  overflow: hidden;
+  border-radius: 6px;
+  background: oklch(14.5% 0 0 / 0.06);
+}
+.skeleton::after {
+  content: "";
+  position: absolute;
+  inset: 0;
+  transform: translateX(-100%);
+  background: linear-gradient(90deg, transparent, oklch(100% 0 0 / 0.65), transparent);
+  animation: sweep 1.4s var(--ease-in-out) infinite;
+}
+
+.no-scrollbar {
+  scrollbar-width: none;
+}
+.no-scrollbar::-webkit-scrollbar {
+  display: none;
+}
+
+/* Reduced motion: fewer and gentler, not none. Fades stay because they
+   carry meaning; anything that moves or sweeps goes. */
+@media (prefers-reduced-motion: reduce) {
+  .enter,
+  .stagger > *,
+  .menu-in,
+  .pop {
+    animation: fade 180ms ease both;
+  }
+  .digit,
+  .grow-x {
+    animation: none;
+  }
+  .skeleton::after,
+  .shimmer {
+    animation: none;
+  }
+  .shimmer {
+    color: var(--fg-2);
+    background: none;
+  }
+  *,
+  *::before,
+  *::after {
+    transition-property: opacity, color, background-color, border-color, box-shadow !important;
+  }
+}
+
+/* Docs prose (app/how-it-works, rendered from content/docs.md). */
+@layer components {
+  .docs {
+    font-size: 15px;
+    line-height: 1.7;
+    color: var(--fg-2);
+  }
+  .docs > :first-child {
+    margin-top: 0;
+  }
+  .docs p {
+    margin: 0 0 1em;
+  }
+  .docs h2,
+  .docs h3 {
+    position: relative;
+    scroll-margin-top: 6rem;
+    color: var(--fg);
+    letter-spacing: -0.02em;
+  }
+  .docs h2 {
+    margin: 2.6em 0 0.7em;
+    padding-top: 1.6em;
+    border-top: 1px solid var(--line);
+    font-size: 1.45rem;
+    font-weight: 600;
+    line-height: 1.25;
+  }
+  .docs h3 {
+    margin: 1.9em 0 0.5em;
+    font-size: 1.05rem;
+    font-weight: 600;
+  }
+  .docs .anchor {
+    position: absolute;
+    left: -1.1em;
+    color: var(--faint);
+    text-decoration: none;
+    opacity: 0;
+    transition: opacity 150ms;
+  }
+  .docs h2 .anchor {
+    top: 1.15em;
+  }
+  .docs h2:hover .anchor,
+  .docs h3:hover .anchor {
+    opacity: 1;
+  }
+  .docs a:not(.anchor) {
+    color: var(--accent-2);
+    text-decoration: underline;
+    text-decoration-color: oklch(54% 0.22 285 / 0.3);
+    text-underline-offset: 3px;
+  }
+  .docs a:not(.anchor):hover {
+    text-decoration-color: var(--accent);
+  }
+  .docs strong {
+    color: var(--fg);
+    font-weight: 600;
+  }
+  .docs ul,
+  .docs ol {
+    margin: 0 0 1.1em;
+    padding-left: 1.3em;
+  }
+  .docs ul {
+    list-style: disc;
+  }
+  .docs ol {
+    list-style: decimal;
+  }
+  .docs li {
+    margin: 0.3em 0;
+  }
+  .docs li::marker {
+    color: var(--faint);
+  }
+  .docs code {
+    font-family: var(--font-mono);
+    font-size: 0.86em;
+    padding: 0.12em 0.4em;
+    border-radius: 6px;
+    border: 1px solid var(--line);
+    background: var(--surface-2);
+    color: var(--fg);
+    overflow-wrap: anywhere;
+  }
+  .docs pre {
+    margin: 0 0 1.2em;
+    padding: 14px 16px;
+    overflow-x: auto;
+    border-radius: 14px;
+    border: 1px solid var(--line);
+    background: var(--surface);
+    box-shadow: var(--shadow);
+    font-size: 13px;
+    line-height: 1.6;
+  }
+  .docs pre code {
+    padding: 0;
+    border: 0;
+    background: none;
+    font-size: inherit;
+    overflow-wrap: normal;
+  }
+  .docs .table-wrap {
+    margin: 0 0 1.3em;
+    overflow-x: auto;
+    border-radius: 14px;
+    border: 1px solid var(--line);
+    background: var(--surface);
+    box-shadow: var(--shadow);
+  }
+  .docs table {
+    width: 100%;
+    border-collapse: collapse;
+    font-size: 13.5px;
+    line-height: 1.5;
+  }
+  .docs th {
+    padding: 9px 14px;
+    text-align: left;
+    font-size: 12px;
+    font-weight: 500;
+    color: var(--muted);
+    background: var(--surface-2);
+    border-bottom: 1px solid var(--line);
+    white-space: nowrap;
+  }
+  .docs td {
+    padding: 9px 14px;
+    border-bottom: 1px solid var(--line);
+    vertical-align: top;
+    min-width: 7rem;
+  }
+  .docs tr:last-child td {
+    border-bottom: 0;
+  }
+}
+
+@layer components {
+  .docs .callout {
+    margin: 0 0 1.4em;
+    padding: 14px 16px;
+    border-radius: 14px;
+    border: 1px solid oklch(52% 0.14 158 / 0.25);
+    background: oklch(52% 0.14 158 / 0.06);
+    color: var(--fg);
+  }
+  .docs .callout p:last-child {
+    margin-bottom: 0;
+  }
+}
+
+@media (max-width: 1023px) {
+  .docs .anchor {
+    display: none;
+  }
+}

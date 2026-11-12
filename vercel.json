@@ -1,7 +1,12 @@
 {
+  "$schema": "https://openapi.vercel.sh/vercel.json",
+  "framework": "nextjs",
   "functions": {
     "api/index.py": {
-      "excludeFiles": "{Base Papers/**,docs/**,extension/**,paper/**,reference_papers/**,results/**,scripts/**,tests/**,*.pptx}"
+      "maxDuration": 30,
+      "memory": 1024,
+      "excludeFiles": "{.next/**,node_modules/**,app/**,components/**,lib/**,public/**,docs/**,extension/**,paper/**,reference_papers/**,results/**,scripts/**,tests/**,*.pptx}"
     }
-  }
+  },
+  "rewrites": [{ "source": "/api/(.*)", "destination": "/api/index" }]
 }

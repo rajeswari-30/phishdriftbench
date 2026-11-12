@@ -252,13 +252,16 @@ _LAYER_NAMES = {
     "shortener": "shortener rule",
     "redirector": "redirect-link rule",
     "user_content": "user-content rule",
+    "hosted_platform": "hosting-platform rule",
+    "homograph": "homograph rule",
 }
 
 
 @dataclass(frozen=True)
 class TrustSignal:
     """What Layer 0 could establish from the URL text. `kind` is one of
-    trusted / first_party_short / user_content / redirector."""
+    trusted / first_party_short / shortener / redirector / user_content /
+    hosted_platform / homograph."""
     kind: str
     domain: str
     reason: str
@@ -367,9 +370,77 @@ def hosted_elsewhere(url: str, *, derived: bool = True) -> TrustSignal | None:
     return None
 
 
+def _decoded_host(host: str) -> str:
+    """The host as a reader sees it: punycode labels (`xn--pple-43d`)
+    decoded back to Unicode. Undecodable labels are left as they are."""
+    labels = []
+    for label in host.split("."):
+        if label.startswith("xn--"):
+            try:
+                label = label.encode("ascii").decode("idna")
+            except UnicodeError:
+                pass
+        labels.append(label)
+    return ".".join(labels)
+
+
+def homograph_target(url: str) -> str | None:
+    """The real domain an internationalised host is dressed up as, if any.
+
+    `xn--pple-43d.com` is `аpple.com` with a Cyrillic `а`: the browser shows
+    "apple.com" and the lexical features see an unremarkable short domain.
+    Folding every non-ASCII character to its ASCII look-alike (the Unicode
+    confusables table, as in features/normalize.py) and comparing against
+    the trusted list and the brand list catches it without guessing."""
+    from phishdriftbench.features.normalize import normalize_confusables
+
+    host = (urlsplit(url).hostname or "").lower()
+    shown = _decoded_host(host)
+    if shown.isascii():
+        return None
+    folded = normalize_confusables(shown).lower()
+    if not folded.isascii() or folded == host:
+        return None
+    folded_domain = _extract(folded).top_domain_under_public_suffix.lower()
+    if folded_domain and folded_domain in load_trusted():
+        return folded_domain
+    label = _extract(folded).domain.lower()
+    if label in lexical._FUZZY_BRAND_TOKENS:
+        return folded_domain or label
+    return None
+
+
+def hosted_platform(url: str) -> TrustSignal | None:
+    """A site on a free hosting platform (`*.vercel.app`, `*.netlify.app`,
+    `*.web.app`, `*.github.io`, ...): any member of the public can publish
+    one in a minute, so the platform's reputation transfers to nobody. The
+    Public Suffix List's private section is the authoritative list of them.
+
+    The lexical model reads these as phishing at 94-98% on shape alone (a
+    long hyphenated label under an unfamiliar suffix), which made every
+    personal portfolio a phishing site. The honest URL-only answer is that
+    the text cannot tell; a page scan can."""
+    host = (urlsplit(url).hostname or "").lower()
+    ext = _extract(host)
+    if not getattr(ext, "is_private", False) or not ext.domain:
+        return None
+    return TrustSignal("hosted_platform", host,
+                       f"{host} is a site on {ext.suffix}, a free hosting platform where "
+                       f"anyone can publish a page, so the address alone cannot tell you "
+                       f"who runs it.")
+
+
 def assess(url: str) -> TrustSignal | None:
     """Layer-0 reading of one already-normalised URL, or None if the text
     establishes nothing and the model has to decide."""
+    imitated = homograph_target(url)
+    if imitated is not None:
+        host = urlsplit(url).hostname or ""
+        return TrustSignal("homograph", host,
+                           f"{_decoded_host(host)} is written with look-alike characters from "
+                           f"another alphabet so that it reads as {imitated}, but it is a "
+                           f"different domain")
+
     signal = hosted_elsewhere(url)
     if signal is not None:
         return signal
@@ -379,4 +450,4 @@ def assess(url: str) -> TrustSignal | None:
         return TrustSignal("trusted", domain,
                            f"{domain} is the genuine domain of a widely used site, and this "
                            f"link points at it directly rather than imitating it.")
-    return None
+    return hosted_platform(url)

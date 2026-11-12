@@ -43,8 +43,8 @@
     border-radius:999px; font-weight:700; font-size:.76rem; border:1px solid transparent;
   }
   .verdict.phishing{ background:var(--phish-bg); color:var(--phish-fg); border-color:var(--phish-line); }
-  .verdict.legitimate{ background:var(--legit-bg); color:var(--legit-fg); border-color:var(--legit-line); }
-  .verdict.uncertain{ background:var(--unsure-bg); color:var(--unsure-fg); border-color:var(--unsure-line); }
+  .verdict.safe{ background:var(--legit-bg); color:var(--legit-fg); border-color:var(--legit-line); }
+  .verdict.suspicious{ background:var(--unsure-bg); color:var(--unsure-fg); border-color:var(--unsure-line); }
   .conf{ margin-left:auto; font-size:.8rem; font-weight:650; color:var(--muted); }
   .checked-url{
     font-family:ui-monospace, Menlo, monospace; font-size:.72rem; color:var(--muted);
@@ -60,6 +60,9 @@
     margin-top:.7rem; padding:.6rem .7rem; border-radius:8px; background:var(--unsure-bg);
     border:1px solid var(--unsure-line); color:#6f4a10; font-size:.76rem; line-height:1.55;
   }
+  .summary{ font-size:.78rem; color:var(--ink-2); line-height:1.55; margin:.5rem 0 0; }
+  .server{ display:flex; flex-direction:column; gap:.25rem; margin-top:.5rem; }
+  .server input{ font-size:.72rem; padding:.35rem .5rem; }
   .error{ color:var(--phish-fg); font-size:.78rem; }
   .muted{ color:var(--muted); font-size:.78rem; }
   .stale{
@@ -83,15 +86,19 @@
   </header>
   <main>
     <form id="form">
-      <input type="text" id="url" placeholder="Paste a URL…" autocomplete="off" spellcheck="false" />
-      <button type="submit" id="checkBtn">Check</button>
+      <input type="text" id="url" placeholder="Paste a link…" autocomplete="off" spellcheck="false" />
+      <button type="submit" id="checkBtn">Scan</button>
     </form>
     <div class="row">
-      <button type="button" class="secondary" id="checkTabBtn">Check current page</button>
+      <button type="button" class="secondary" id="checkTabBtn">Scan current page</button>
     </div>
     <div id="result"></div>
   </main>
-  <footer>Right-click any link on a page → “Check this link with PhishLens”</footer>
+  <footer>Right-click any link → “Scan this link with PhishLens”
+    <label class="server">Server
+      <input type="text" id="server" spellcheck="false" autocomplete="off" />
+    </label>
+  </footer>
   <script src="popup.js"></script>
 </body>
 </html>

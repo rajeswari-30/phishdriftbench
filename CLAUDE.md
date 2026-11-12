@@ -6,8 +6,14 @@ This file provides guidance to Claude Code (claude.ai/code) when working with co
 
 PhishDriftBench + DASH: a four-axis evaluation protocol (Time, Source, Provenance, Evasion) for
 phishing-URL detectors, applied to five reimplemented baselines drawn from a ten-paper corpus,
-plus DASH (Drift-Aware Selective Hardening), a proposed lightweight mitigation. URL-only — no
-page is ever fetched, rendered, hosted, or transmitted.
+plus DASH (Drift-Aware Selective Hardening), a proposed lightweight mitigation. The paper's
+experiments are URL-only: no page is ever fetched.
+
+PhishLens (the web app) is built on top: `src/phishdriftbench/scan/` adds threat lists, live
+domain lookups and a safe HTML-only page fetch to the URL model, and combines them into one
+explainable 0-100 score. The frontend (Next.js) lives at the repo root in `app/`, `components/`,
+`lib/`; `api/index.py` is the Vercel Python function serving `/api/*`. One Vercel project hosts
+both (`vercel.json`).
 
 Start with [RESEARCH_GAP_AND_IMPROVEMENTS.md](RESEARCH_GAP_AND_IMPROVEMENTS.md) for the research
 gap and the actual results; [docs/GAP_ANALYSIS.md](docs/GAP_ANALYSIS.md) for the base-paper corpus and gap
@@ -39,9 +45,13 @@ PYTHONPATH=src python scripts/real_data_check.py
 # Any experiment script (see scripts/README.md for the full index)
 PYTHONPATH=src python scripts/run_axis_t.py
 
-# Interactive demo (CLI or web)
+# Interactive demo: CLI, or the PhishLens web app (API + Next.js, two terminals)
 PYTHONPATH=src python scripts/demo_cli.py
-PYTHONPATH=src python webapp/app.py   # http://127.0.0.1:5001
+npm run dev:api   # FastAPI on :8000 (src/phishdriftbench/server.py)
+npm run dev       # Next.js on :3000, proxies /api to :8000
+
+# Live scanner check against OpenPhish + Tranco (contacts real sites)
+PYTHONPATH=src python scripts/eval_scanner.py
 ```
 
 Datasets (PhishTank, PhiUSIIL, Tranco) and everything under `results/` and `data/processed/` are
@@ -85,6 +95,12 @@ it and write CSVs to `results/`. Each subpackage:
   each baseline's fit+predict in its own subprocess (see constraint below).
 - **`demo/model.py`** — a separate, ordinary train-once/save/load model for the interactive CLI
   and web demo. Deliberately *not* one of the paper's B1-B5 baselines.
+- **`scan/`** — the PhishLens scanner. `engine.py` orchestrates and turns evidence into
+  findings; `score.py` sums their log-odds weights into the risk score; `netsafe.py` is the
+  SSRF-safe fetcher (pinned public IPs, re-checked redirects); `page.py` reads HTML without
+  executing it; `domains.py` (RDAP/DNS/TLS), `intel.py` (threat lists), `brands.py` (brand →
+  owned domains), `judge.py` (optional Claude review). Weights are hand-set and checked with
+  `scripts/eval_scanner.py`; re-run it after changing any weight.
 - **`demo/trust.py`** — Layer 0 of the demo, ahead of the model: input repair (missing scheme,
   host case, defanged `hxxps://evil[.]tk`), an offline trusted-domain lookup, and the cases where
   the text stops (shorteners, redirectors, pages published by strangers). Its three shipped lists

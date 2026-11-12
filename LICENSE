@@ -22,8 +22,8 @@ SOFTWARE.
 
 ---
 
-Note: this repository's code (src/, scripts/, tests/, webapp/) is MIT
-licensed. The paper draft in paper/ and the write-ups in docs/ and the root
+Note: this repository's code (src/, scripts/, tests/, api/, app/, components/,
+lib/, extension/) is MIT licensed. The paper draft in paper/ and the write-ups in docs/ and the root
 *.md files are not code; treat them as All Rights Reserved unless stated
 otherwise. reference_papers/ contains other authors' copyrighted work and is
 never published as part of this repository.

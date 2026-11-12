@@ -54,19 +54,19 @@ _fonts_ready = False
 
 
 def _register_fonts() -> None:
-    """DejaVu ships inside matplotlib, so it is always present. Unlike the PDF
-    base-14 fonts it covers the Cyrillic and Greek look-alike letters that
+    """Inter and JetBrains Mono, bundled in demo/fonts/ (OFL). Unlike the PDF
+    base-14 fonts they cover the Cyrillic and Greek look-alike letters that
     homoglyph phishing URLs are built from; Helvetica would print those as
-    empty boxes, hiding exactly the character that makes the URL dangerous."""
+    empty boxes, hiding exactly the character that makes the URL dangerous.
+    Bundled rather than taken from matplotlib, which the deployed API no
+    longer installs."""
     global _fonts_ready
     if _fonts_ready:
         return
-    import matplotlib
-
-    ttf = os.path.join(matplotlib.get_data_path(), "fonts", "ttf")
-    pdfmetrics.registerFont(TTFont("PL", os.path.join(ttf, "DejaVuSans.ttf")))
-    pdfmetrics.registerFont(TTFont("PL-Bold", os.path.join(ttf, "DejaVuSans-Bold.ttf")))
-    pdfmetrics.registerFont(TTFont("PL-Mono", os.path.join(ttf, "DejaVuSansMono.ttf")))
+    fonts = os.path.join(os.path.dirname(__file__), "fonts")
+    pdfmetrics.registerFont(TTFont("PL", os.path.join(fonts, "Inter-Regular.ttf")))
+    pdfmetrics.registerFont(TTFont("PL-Bold", os.path.join(fonts, "Inter-SemiBold.ttf")))
+    pdfmetrics.registerFont(TTFont("PL-Mono", os.path.join(fonts, "JetBrainsMono-Regular.ttf")))
     addMapping("PL", 0, 0, "PL")
     addMapping("PL", 1, 0, "PL-Bold")
     addMapping("PL", 0, 1, "PL")
@@ -269,7 +269,7 @@ class _ShapChart(Flowable):
         c.line(mid, top - len(self.rows) * self.ROW, mid, top + 1)
 
 
-def _canvas_class(host: str, generated: str, report_id: str):
+def _canvas_class(host: str, generated: str, report_id: str, title: str = TITLE):
     """Canvas that holds every page until the document is finished, so each
     footer can say "Page 2 of 3". Pages after the first also get a running
     header naming the report and the host it covers."""
@@ -305,7 +305,7 @@ def _canvas_class(host: str, generated: str, report_id: str):
                 self.setFont("PL", 8)
                 self.setFillColor(MUTED)
                 self.drawRightString(right, h - 13 * mm,
-                                     _fit(f"{TITLE}  ·  {host}", "PL", 8, (right - left) * 0.7))
+                                     _fit(f"{title}  ·  {host}", "PL", 8, (right - left) * 0.7))
                 self.line(left, h - 15.5 * mm, right, h - 15.5 * mm)
             self.line(left, 16 * mm, right, 16 * mm)
             self.setFont("PL", 7.3)

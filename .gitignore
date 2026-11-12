@@ -34,3 +34,11 @@ paper/*.out
 paper/*.toc
 .claude/settings.local.json
 .claude/scheduled_tasks.lock
+# Next.js frontend
+node_modules/
+.next/
+out/
+next-env.d.ts
+*.tsbuildinfo
+.vercel
+.env*.local
