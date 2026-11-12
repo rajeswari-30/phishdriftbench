@@ -190,9 +190,9 @@ export function Scanner() {
         </form>
         <div className="flex flex-col gap-3 border-t border-line bg-surface-2/50 px-4 py-3 sm:flex-row sm:items-center">
           <Switch checked={deep} onChange={setDeep} label="Deep scan" />
-          <div className="flex flex-wrap gap-1.5 sm:ml-auto sm:justify-end">
+          <div className="grid grid-cols-2 gap-1.5 sm:ml-auto sm:flex sm:flex-wrap sm:justify-end">
             {EXAMPLES.map((ex) => (
-              <button key={ex.url} type="button" onClick={() => run(ex.url)} className={pillClass("ghost", "sm")}>
+              <button key={ex.url} type="button" onClick={() => run(ex.url)} className={cx(pillClass("ghost", "sm"), "max-sm:w-full")}>
                 <ex.Icon stroke={1.75} aria-hidden="true" />
                 {ex.label}
               </button>
@@ -212,22 +212,23 @@ export function Scanner() {
       <p className="sr-only" role="status" aria-live="polite">
         {announce}
       </p>
-      <ul className="mt-3 flex flex-wrap justify-center gap-1.5" aria-label="Privacy">
+      <ul className="mt-3 no-scrollbar -mx-4 flex justify-[safe_center] gap-1.5 overflow-x-auto px-4 [mask-image:linear-gradient(to_right,transparent,black_16px,black_calc(100%-16px),transparent)] sm:mx-0 sm:flex-wrap sm:justify-center sm:overflow-visible sm:px-0 sm:[mask-image:none]" aria-label="Privacy">
         {(deep
           ? [
-              { t: "Scripts never run", Icon: IconCodeOff },
-              { t: "Your browser never opens it", Icon: IconEyeOff },
-              { t: "No private links", Icon: IconLock },
+              { t: "Scripts never run", short: "No scripts run", Icon: IconCodeOff },
+              { t: "Your browser never opens it", short: "Never opened", Icon: IconEyeOff },
+              { t: "No private links", short: "No private links", Icon: IconLock },
             ]
           : [
-              { t: "Nothing fetched", Icon: IconEyeOff },
-              { t: "Link and lookups only", Icon: IconLink },
+              { t: "Nothing fetched", short: "Nothing fetched", Icon: IconEyeOff },
+              { t: "Link and lookups only", short: "Lookups only", Icon: IconLink },
             ]
-        ).map(({ t, Icon }) => (
-          <li key={t}>
+        ).map(({ t, short, Icon }) => (
+          <li key={t} className="shrink-0">
             <Badge>
               <Icon stroke={1.75} aria-hidden="true" />
-              {t}
+              <span className="sm:hidden">{short}</span>
+              <span className="max-sm:hidden">{t}</span>
             </Badge>
           </li>
         ))}
