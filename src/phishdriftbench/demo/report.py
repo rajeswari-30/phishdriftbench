@@ -269,7 +269,7 @@ class _ShapChart(Flowable):
         c.line(mid, top - len(self.rows) * self.ROW, mid, top + 1)
 
 
-def _canvas_class(host: str, generated: str, report_id: str):
+def _canvas_class(host: str, generated: str, report_id: str, title: str = TITLE):
     """Canvas that holds every page until the document is finished, so each
     footer can say "Page 2 of 3". Pages after the first also get a running
     header naming the report and the host it covers."""
@@ -305,7 +305,7 @@ def _canvas_class(host: str, generated: str, report_id: str):
                 self.setFont("PL", 8)
                 self.setFillColor(MUTED)
                 self.drawRightString(right, h - 13 * mm,
-                                     _fit(f"{TITLE}  ·  {host}", "PL", 8, (right - left) * 0.7))
+                                     _fit(f"{title}  ·  {host}", "PL", 8, (right - left) * 0.7))
                 self.line(left, h - 15.5 * mm, right, h - 15.5 * mm)
             self.line(left, 16 * mm, right, 16 * mm)
             self.setFont("PL", 7.3)
@@ -550,4 +550,184 @@ def build_report_pdf(result: dict, context: dict | None = None,
         story.append(Paragraph("Live lookups could not be completed for this URL.", S["body"]))
 
     doc.build(story, canvasmaker=_canvas_class(host, generated, report_id))
+    return buf.getvalue()
+
+
+# ---------------------------------------------------------------------------
+# Full-scan report (scan/engine.py)
+# ---------------------------------------------------------------------------
+
+SCAN_VERDICTS = {
+    "phishing": (PHISH, colors.HexColor("#fdf1ef"), "Phishing",
+                 "Do not open this link or enter any details on the page it leads to."),
+    "suspicious": (UNSURE, colors.HexColor("#fcf6e8"), "Suspicious",
+                   "Do not enter any details unless you can confirm the site some other way."),
+    "safe": (LEGIT, colors.HexColor("#eff8f1"), "Looks safe",
+             "No signs of phishing were found. Still make sure you trust whoever sent it."),
+}
+_SEVERITY_TONE = {"critical": PHISH, "high": PHISH, "medium": UNSURE, "low": MUTED,
+                  "info": MUTED, "good": LEGIT}
+_INTEL_LABEL = {"hit": "Listed", "clean": "Not listed", "unavailable": "Unavailable",
+                "not_configured": "Not configured"}
+
+
+def _brand_names(keys: list[str]) -> list[str]:
+    from phishdriftbench.scan.brands import BY_KEY
+    return [BY_KEY[k].name if k in BY_KEY else k for k in keys]
+
+
+def build_scan_report_pdf(scan: dict, generated_at: datetime | None = None) -> bytes:
+    """Render the full report for one `scan.engine.scan` result: verdict and
+    risk, every finding with its weight, the threat lists, the domain and
+    page facts, and the URL model's contributions."""
+    _register_fonts()
+    S = _styles()
+    when = generated_at or datetime.now(timezone.utc)
+    generated = when.strftime("%d %b %Y, %H:%M UTC")
+    report_id = scan.get("id") or uuid.uuid4().hex[:12]
+    url = scan.get("url", "")
+    host = report_host(url) or url
+
+    buf = io.BytesIO()
+    doc = SimpleDocTemplate(
+        buf, pagesize=A4, leftMargin=MARGIN_X, rightMargin=MARGIN_X,
+        topMargin=22 * mm, bottomMargin=24 * mm,
+        title=f"PhishLens report: {host}", author="PhishLens", creator="PhishLens",
+        subject=f"Link scan of {url}", keywords="phishing, URL, PhishLens",
+    )
+    W = doc.width
+    story = []
+    head = Table([[Paragraph("PhishLens", S["brand"]),
+                   Paragraph(f"Generated {generated}<br/>Report {report_id}", S["meta"])]],
+                 colWidths=[W * 0.5, W * 0.5])
+    head.setStyle(TableStyle([("VALIGN", (0, 0), (-1, -1), "TOP")] +
+                             [(k, (0, 0), (-1, -1), 0) for k in
+                              ("LEFTPADDING", "RIGHTPADDING", "TOPPADDING", "BOTTOMPADDING")]))
+    story += [head, Spacer(1, 26), Paragraph("Link scan report", S["title"]), Spacer(1, 3),
+              Paragraph(_t(host), S["host"])]
+
+    # ---- 01 summary ----------------------------------------------------------
+    fg, bg, label, advice = SCAN_VERDICTS.get(scan.get("verdict"), (INK, SOFT, "Unknown", None))
+    rows = [
+        [Paragraph("VERDICT", S["label"]), Paragraph("RISK SCORE", S["label"])],
+        [Paragraph(_t(label), ParagraphStyle("v", parent=S["big"], textColor=fg)),
+         Paragraph(f"{int(scan.get('risk', 0))} / 100", S["big"])],
+        [Paragraph("LINK", S["label"]), ""],
+        [Paragraph(_t(url), S["mono"]), ""],
+    ]
+    if scan.get("final_url") and scan["final_url"] != url:
+        rows += [[Paragraph("LANDS ON", S["label"]), ""], [Paragraph(_t(scan["final_url"]), S["mono"]), ""]]
+    rows.append([Paragraph(_t(scan.get("summary") or advice or ""), S["body"]), ""])
+    summary = Table(rows, colWidths=[W * 0.5, W * 0.5])
+    last = len(rows) - 1
+    summary.setStyle(TableStyle(
+        [("BACKGROUND", (0, 0), (-1, -1), bg), ("LINEBEFORE", (0, 0), (0, -1), 2.5, fg)]
+        + [("SPAN", (0, i), (1, i)) for i in range(2, len(rows))]
+        + [("LEFTPADDING", (0, 0), (-1, -1), 14), ("RIGHTPADDING", (0, 0), (-1, -1), 14),
+           ("TOPPADDING", (0, 0), (-1, -1), 2), ("BOTTOMPADDING", (0, 0), (-1, -1), 2),
+           ("TOPPADDING", (0, 0), (-1, 0), 14), ("TOPPADDING", (0, last), (-1, last), 10),
+           ("BOTTOMPADDING", (0, last), (-1, last), 14)]))
+    evidence = scan.get("evidence", "limited")
+    story += [_section(1, "Summary", S), summary, Spacer(1, 8),
+              Paragraph(f"Evidence: {evidence}. Scanned in {scan.get('elapsed_ms', 0) / 1000:.1f} s at "
+                        f"{_t(scan.get('scanned_at', ''))}.", S["small"])]
+
+    # ---- 02 findings -----------------------------------------------------------
+    findings = scan.get("findings") or []
+    story.append(_section(2, "What we found", S))
+    if findings:
+        data = [[Paragraph("FINDING", S["head"]), Paragraph("DETAIL", S["head"]),
+                 Paragraph("WEIGHT", S["head_right"])]]
+        for f in findings:
+            tone = _SEVERITY_TONE.get(f["severity"], MUTED)
+            data.append([
+                Paragraph(f'<font color="{tone.hexval().replace("0x", "#")}">{_t(f["severity"].upper())}'
+                          f'</font><br/>{_t(f["title"])}', S["cell"]),
+                Paragraph(_t(f["detail"]), S["cell_muted"]),
+                Paragraph(f'{f["weight"]:+.1f}' if f["weight"] else "0", S["cell_right"]),
+            ])
+        story += [Paragraph("Weights are in log odds; with the starting point of -1.4 they sum to "
+                            "the risk score.", S["small"]), Spacer(1, 6),
+                  _plain_table(data, [W * 0.3, W * 0.58, W * 0.12],
+                               [("LINEBELOW", (0, 0), (-1, 0), 0.6, INK), ("VALIGN", (0, 1), (-1, -1), "TOP"),
+                                ("LEFTPADDING", (0, 0), (0, -1), 0)]
+                               + [("LINEBELOW", (0, i), (-1, i), 0.3, LINE) for i in range(1, len(data) - 1)],
+                               repeat=1)]
+    else:
+        story.append(Paragraph("No finding moved the score.", S["body"]))
+
+    # ---- 03 threat lists ---------------------------------------------------------
+    story.append(_section(3, "Threat lists", S))
+    story.append(_kv_block("Sources", [
+        (i["source"], f'{_INTEL_LABEL.get(i["status"], i["status"])}'
+                      + (f' ({i["detail"]})' if i.get("detail") else ""), "text")
+        for i in scan.get("intel") or []] or [("Threat lists", "Not checked", "text")], S, W))
+
+    # ---- 04 domain ---------------------------------------------------------------
+    d = scan.get("domain") or {}
+    story.append(_section(4, "Domain and certificate", S))
+    age = d.get("age_days")
+    story.append(_kv_block("Registration", [
+        ("Domain", d.get("domain"), "mono"),
+        ("Registered on", d.get("registered"), "mono"),
+        ("Age", f"{age:,} days" if age is not None else None, "text"),
+        ("Expires on", d.get("expires"), "mono"),
+        ("Registrar", d.get("registrar"), "text"),
+    ] + ([("Note", d.get("rdap_error"), "text")] if d.get("rdap_error") else []), S, W))
+    story.append(_kv_block("Hosting", [
+        ("IP addresses", ", ".join(d.get("a_records") or []), "mono"),
+        ("Nameservers", ", ".join(d.get("nameservers") or []), "mono"),
+        ("Mail records", d.get("mx"), "flag"),
+    ], S, W))
+    story.append(_kv_block("Certificate", [
+        ("Issued to", d.get("cert_subject"), "text"),
+        ("Issued by", d.get("cert_issuer"), "text"),
+        ("Valid from", d.get("cert_not_before"), "mono"),
+        ("Valid until", d.get("cert_not_after"), "mono"),
+        ("Covers", ", ".join((d.get("cert_sans") or [])[:10]), "mono"),
+    ] + ([("Note", d.get("cert_error"), "text")] if d.get("cert_error") else []), S, W))
+
+    # ---- 05 page -----------------------------------------------------------------
+    p = scan.get("page")
+    story.append(_section(5, "The page", S))
+    if not p:
+        story.append(Paragraph("The page was not fetched (link-only scan).", S["body"]))
+    else:
+        a = p.get("analysis") or {}
+        hops = " → ".join(report_host(h["url"]) or h["url"] for h in p.get("hops") or [])
+        story.append(_kv_block("Fetch", [
+            ("Loaded", p.get("fetched"), "flag"),
+            ("HTTP status", p.get("status"), "mono"),
+            ("Redirect path", hops, "mono"),
+            ("Certificate verified", p.get("tls_valid"), "flag") if p.get("tls_valid") is not None
+            else ("Certificate verified", "Plain http", "text"),
+        ] + ([("Error", p.get("error"), "text")] if p.get("error") else []), S, W))
+        if a:
+            forms = a.get("forms") or []
+            story.append(_kv_block("Content", [
+                ("Title", a.get("title"), "text"),
+                ("Asks for a password", a.get("has_password"), "flag"),
+                ("Sensitive fields", ", ".join(a.get("sensitive_fields") or []), "mono"),
+                ("Forms", f"{len(forms)}" + (": posts to " + ", ".join(sorted({f["action_domain"] for f in forms
+                                                                              if f.get("action_domain")}))
+                                              if forms else ""), "text"),
+                ("Presents itself as", ", ".join(_brand_names(a.get("brand_claims") or [])), "text"),
+                ("Links", f'{a.get("link_count", 0)} ({a.get("dead_link_ratio", 0) * 100:.0f}% empty)', "text"),
+            ], S, W))
+
+    # ---- 06 URL model --------------------------------------------------------------
+    um = scan.get("url_model") or {}
+    signals = um.get("signals") or []
+    story.append(_section(6, "URL model", S))
+    story.append(Paragraph(
+        _t(f"The lexical model from the PhishDriftBench paper scores the link text "
+           f"{float(um.get('ml_score', 0)) * 100:.1f}% against a {float(um.get('decision_threshold', 0)) * 100:.1f}% "
+           f"threshold. In this scan it is one finding among the others, with its influence capped."),
+        S["body"]))
+    top = [s for s in signals if s["contribution"] != 0][:10]
+    if top:
+        story += [Spacer(1, 8), _ShapChart([(_sentence(s["label"]).rstrip("."), float(s["contribution"]), False)
+                                            for s in top], W)]
+
+    doc.build(story, canvasmaker=_canvas_class(host, generated, report_id, "Link scan report"))
     return buf.getvalue()

@@ -1,11 +1,20 @@
-Flask==3.1.3
+# Runtime dependencies of the PhishLens API (api/index.py on Vercel).
+# The research code needs more: see requirements-research.txt.
+fastapi==0.162.5
+pydantic==2.14.3
 numpy==2.5.3
 pandas==3.0.6
-xgboost-cpu==3.4.1
+# Vercel builds on Linux, where the CPU-only wheel is a quarter of the size.
+# It has no macOS wheel, so local installs on a Mac get the full package.
+xgboost-cpu==3.4.1; sys_platform == "linux"
+xgboost==3.4.1; sys_platform != "linux"
 tldextract==5.4.0
 confusable-homoglyphs==3.3.1
-python-whois==0.9.6
 dnspython==2.8.0
 cryptography==50.0.2
+urllib3==2.8.0
+certifi==2026.10.23
+beautifulsoup4==4.15.0
 reportlab==5.0.1
-matplotlib==3.11.2
+# Optional: the Claude page review runs only when ANTHROPIC_API_KEY is set.
+anthropic==2.8.0

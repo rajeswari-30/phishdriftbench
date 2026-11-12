@@ -66,7 +66,6 @@ def _brand_name(key: str) -> str:
 # ---------------------------------------------------------------------------
 
 def _url_findings(url: str, res: dict, signal, out: list[Finding]) -> None:
-    by = res["decided_by"]
     kind = signal.kind if signal else None
     if kind == "homograph":
         out.append(Finding("homograph", "url", "Look-alike characters in the domain",

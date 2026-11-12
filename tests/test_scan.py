@@ -112,3 +112,33 @@ def test_findings_are_ordered_by_severity():
     s = score.combine([Finding("a", "url", "a", "a", -1.0), Finding("b", "page", "b", "b", 4.0)])
     ids = [f["id"] for f in s.to_dict()["findings"]]
     assert ids == ["b", "a"]
+
+
+# ---- API -------------------------------------------------------------------------
+
+@pytest.fixture(scope="module")
+def client():
+    from fastapi.testclient import TestClient
+
+    from phishdriftbench.server import app
+    return TestClient(app)
+
+
+def test_health_lists_sources(client):
+    body = client.get("/api/health").json()
+    assert body["ok"] and "openphish" in body["sources"]
+
+
+@pytest.mark.parametrize("url,fragment", [
+    ("mailto:someone@example.com", "http and https"),
+    ("not a url at all", "web address"),
+    ("http://10.0.0.1/", "private or internal"),
+])
+def test_scan_rejects_what_it_must_not_scan(client, url, fragment):
+    r = client.post("/api/scan", json={"url": url})
+    assert r.status_code == 400 and fragment in r.json()["detail"]
+
+
+def test_check_endpoint_is_offline_url_model(client):
+    body = client.post("/api/check", json={"url": "https://xn--pple-43d.com"}).json()
+    assert body["verdict"] == "PHISHING"

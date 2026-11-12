@@ -16,3 +16,10 @@ datasketch
 flask
 reportlab
 pytest
+fastapi
+httpx
+pydantic
+beautifulsoup4
+urllib3
+certifi
+anthropic
