@@ -31,7 +31,7 @@ export function CardHeader({ title, aside, icon }: { title: ReactNode; aside?: R
 const RING = "shadow-[0_0_0_1px_oklch(0%_0_0/0.09),0_1px_0_oklch(0%_0_0/0.06)]";
 const PILL = {
   primary:
-    "rounded-full bg-[linear-gradient(to_bottom,oklch(30%_0_0),oklch(16%_0_0))] text-pill-fg shadow-[inset_0_1px_0_oklch(100%_0_0/0.16),0_0_0_1px_oklch(0%_0_0/0.9)] hover:bg-[linear-gradient(to_bottom,oklch(36%_0_0),oklch(22%_0_0))]",
+    "rounded-full bg-[linear-gradient(to_bottom,oklch(59%_0.21_285),oklch(49%_0.23_285))] text-white shadow-[inset_0_1px_0_oklch(100%_0_0/0.22),0_0_0_1px_oklch(43%_0.21_285)] hover:bg-[linear-gradient(to_bottom,oklch(63%_0.2_285),oklch(53%_0.22_285))]",
   ghost: `rounded-[10px] bg-surface text-fg ${RING} hover:bg-surface-2 hover:shadow-[0_0_0_1px_oklch(0%_0_0/0.16),0_1px_0_oklch(0%_0_0/0.08)] [&>svg]:text-muted hover:[&>svg]:text-fg`,
   danger: `rounded-[10px] bg-surface text-fg-2 ${RING} hover:bg-danger/5 hover:text-danger hover:shadow-[0_0_0_1px_color-mix(in_oklch,var(--danger)_40%,transparent)] [&>svg]:text-muted hover:[&>svg]:text-danger`,
 };
@@ -113,16 +113,28 @@ export function StatusIcon({ state, tone = "ok" }: { state: "pending" | "active"
 }
 
 /** A strip of labelled figures separated by hairlines, wrapping on small screens. */
-export function Metrics({ items }: { items: { label: string; value: ReactNode; tone?: Tone; icon?: ReactNode }[] }) {
+export function Metrics({
+  items,
+  cols = 6,
+}: {
+  items: { label: string; value: ReactNode; tone?: Tone; icon?: ReactNode }[];
+  cols?: 5 | 6;
+}) {
   return (
-    // A 1px gap over a line-coloured background draws every hairline, at
-    // every column count, without per-breakpoint border rules.
-    <dl className="grid grid-cols-2 gap-px border-b border-line bg-line sm:grid-cols-3 lg:grid-cols-6">
+    // Each cell draws a half-pixel ring; neighbouring rings meet as one
+    // hairline, and an empty slot in the last row stays blank instead of
+    // showing a grey block. The card's overflow-hidden trims the outer edge.
+    <dl
+      className={cx(
+        "grid grid-cols-2 border-t border-line sm:grid-cols-3",
+        cols === 5 ? "lg:grid-cols-5" : "lg:grid-cols-6",
+      )}
+    >
       {items.map((m) => (
-        <div key={m.label} className="bg-surface px-4 py-3">
-          <dt className="flex items-center gap-1.5 text-xs text-muted [&>svg]:size-3.5 [&>svg]:shrink-0">
+        <div key={m.label} className="bg-surface px-4 py-3 shadow-[0_0_0_0.5px_var(--line)]">
+          <dt className="flex min-w-0 items-center gap-1.5 text-xs whitespace-nowrap text-muted [&>svg]:size-3.5 [&>svg]:shrink-0">
             {m.icon}
-            {m.label}
+            <span className="truncate">{m.label}</span>
           </dt>
           <dd className={cx("mt-1 truncate text-[15px] font-medium tabular-nums", m.tone ? TONE_TEXT[m.tone] : "text-fg")}>
             {m.value}

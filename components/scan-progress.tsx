@@ -18,7 +18,7 @@ export function ScanProgress({ url, deep }: { url: string; deep: boolean }) {
   }, [url, steps.length]);
 
   return (
-    <Card className="enter mt-6 overflow-hidden" aria-live="polite">
+    <Card className="enter mx-auto mt-6 max-w-3xl overflow-hidden" aria-live="polite">
       <CardHeader
         icon={<StatusIcon state="active" />}
         title="Scanning"

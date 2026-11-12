@@ -134,7 +134,7 @@ export function Toc({ items, mobile = false }: { items: TocItem[]; mobile?: bool
             className={cx(
               "block rounded-lg py-1 text-[13px] leading-snug transition-colors",
               i.depth === 3 ? "pl-5" : "pl-2",
-              active === i.id ? "bg-surface-2 font-medium text-fg" : "text-muted hover:text-fg",
+              active === i.id ? "bg-accent-soft font-medium text-accent-2" : "text-muted hover:text-fg",
             )}
           >
             {i.text}

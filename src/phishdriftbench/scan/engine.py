@@ -519,7 +519,9 @@ def scan(raw_url: str, *, deep: bool = True, use_ai: bool | None = None,
         "ai": ai if ai is not None else {"enabled": judge.enabled(), "ran": False},
     })
     if out["page"] and out["page"]["analysis"]:
-        out["page"]["analysis"].pop("text_excerpt", None)  # attacker text stays server-side
+        analysis = out["page"]["analysis"]
+        analysis.pop("text_excerpt", None)  # attacker text stays server-side
+        analysis["brand_claims"] = [_brand_name(k) for k in analysis.get("brand_claims", [])]
 
     with _cache_lock:
         _cache[key] = (time.time(), out)

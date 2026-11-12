@@ -3,6 +3,7 @@
 import {
   IconAlertCircle,
   IconAlertTriangle,
+  IconChevronDown,
   IconClockPause,
   IconRefresh,
   IconServerOff,
@@ -29,7 +30,7 @@ import { forget, loadRecent, remember, type RecentScan } from "@/lib/history";
 import type { ScanResult } from "@/lib/types";
 import { ResultView } from "./result-view";
 import { ScanProgress } from "./scan-progress";
-import { Badge, Card, CardHeader, cx, pillClass } from "./ui";
+import { Badge, Card, cx, pillClass } from "./ui";
 
 const EXAMPLES = [
   { label: "Phishing link", url: "http://paypal-secure-login-verify.account-update.xyz/signin", Icon: IconFishHook },
@@ -57,6 +58,8 @@ export function Scanner() {
   const [fieldError, setFieldError] = useState<string | null>(null);
   const [announce, setAnnounce] = useState("");
   const [recent, setRecent] = useState<RecentScan[]>([]);
+  // Open until the first result arrives, then folded so the result has the room.
+  const [recentOpen, setRecentOpen] = useState(true);
   const inflight = useRef<AbortController | null>(null);
   const input = useRef<HTMLInputElement>(null);
   const resultRef = useRef<HTMLDivElement>(null);
@@ -101,6 +104,7 @@ export function Scanner() {
         const result = await scan(target, deep, ctrl.signal);
         setState({ kind: "done", result });
         setRecent(remember(result));
+        setRecentOpen(false);
         setAnnounce(`Scan complete. ${result.verdict}, risk ${result.risk} out of 100. ${result.summary}`);
         window.history.replaceState(null, "", `/?${new URLSearchParams({ url: target })}`);
         requestAnimationFrame(() => resultRef.current?.scrollIntoView({ behavior: "smooth", block: "start" }));
@@ -132,12 +136,13 @@ export function Scanner() {
 
   return (
     <div>
+      <div className="mx-auto max-w-3xl">
       <Card
         className={cx(
           "overflow-hidden transition-shadow",
           fieldError
             ? "border-danger/50 ring-4 ring-danger/10"
-            : "has-[input:focus-visible]:border-line-2 has-[input:focus-visible]:ring-4 has-[input:focus-visible]:ring-fg/5",
+            : "has-[input:focus-visible]:border-line-2 has-[input:focus-visible]:border-accent/40 has-[input:focus-visible]:ring-4 has-[input:focus-visible]:ring-accent/15",
         )}
       >
         <form
@@ -227,6 +232,7 @@ export function Scanner() {
           </li>
         ))}
       </ul>
+      </div>
 
       <div ref={resultRef} className="scroll-mt-20">
         {state.kind === "scanning" && <ScanProgress url={state.url} deep={state.deep} />}
@@ -235,50 +241,70 @@ export function Scanner() {
       </div>
 
       {recent.length > 0 && state.kind !== "scanning" && (
-        <Card className="enter mt-8 overflow-hidden">
-          <CardHeader
-            icon={<IconHistory stroke={1.75} aria-hidden="true" />}
-            title="Recent scans"
-            aside={
-              <>
-                <span className="rounded-full bg-surface-2 px-2 py-0.5 font-mono text-[11px] tabular-nums text-muted">{recent.length}</span>
-                <button
-                  type="button"
-                  onClick={() => {
-                    forget();
-                    setRecent([]);
-                  }}
-                  className={pillClass("danger", "xs")}
-                >
-                  <IconTrash stroke={1.75} aria-hidden="true" />
-                  Clear
-                </button>
-              </>
-            }
-          />
-          <ul className="py-1">
-            {recent.map((r) => (
-              <li key={r.url}>
-                <button
-                  type="button"
-                  onClick={() => run(r.url)}
-                  className="group flex w-full items-center gap-3 px-4 py-2.5 text-left transition-colors duration-200 hover:bg-surface-2"
-                >
-                  {(() => {
-                    const { Icon, cls } = VERDICT_ICON[r.verdict];
-                    return <Icon className={cx("size-4 shrink-0", cls)} stroke={1.75} aria-label={r.verdict} />;
-                  })()}
-                  <span className="min-w-0 flex-1 truncate font-mono text-[13px] text-fg-2 transition-colors group-hover:text-fg">{r.url}</span>
-                  <span className="font-mono text-xs tabular-nums text-muted">{r.risk}</span>
-                  <IconArrowRight
-                    className="size-4 shrink-0 -translate-x-1 text-faint opacity-0 transition-all duration-200 group-hover:translate-x-0 group-hover:opacity-100"
-                    stroke={1.75}
-                    aria-hidden="true"
-                  />
-                </button>
-              </li>
-            ))}
-          </ul>
+        <Card className={cx("enter mt-8 overflow-hidden", state.kind !== "done" && "mx-auto max-w-3xl")}>
+          <div className={cx("flex items-center gap-2 px-2 py-1.5", recentOpen && "border-b border-line")}>
+            <button
+              type="button"
+              aria-expanded={recentOpen}
+              aria-controls="recent-list"
+              onClick={() => setRecentOpen((o) => !o)}
+              className="group flex min-w-0 flex-1 items-center gap-2.5 rounded-[10px] px-2 py-1.5 text-left transition-colors hover:bg-surface-2"
+            >
+              <IconHistory className="size-4 shrink-0 text-muted" stroke={1.75} aria-hidden="true" />
+              <span className="text-sm font-semibold">Recent scans</span>
+              <span className="rounded-full bg-surface-2 px-2 py-0.5 font-mono text-[11px] tabular-nums text-muted group-hover:bg-surface-3">
+                {recent.length}
+              </span>
+              <IconChevronDown
+                className={cx("ml-auto size-4 text-muted transition-transform duration-300", recentOpen && "rotate-180")}
+                stroke={1.75}
+                aria-hidden="true"
+              />
+            </button>
+            <button
+              type="button"
+              onClick={() => {
+                forget();
+                setRecent([]);
+              }}
+              className={pillClass("danger", "xs")}
+            >
+              <IconTrash stroke={1.75} aria-hidden="true" />
+              Clear
+            </button>
+          </div>
+          <div
+            id="recent-list"
+            inert={!recentOpen}
+            className={cx(
+              "grid transition-[grid-template-rows,opacity] duration-300 ease-[var(--ease-out)]",
+              recentOpen ? "grid-rows-[1fr] opacity-100" : "grid-rows-[0fr] opacity-0",
+            )}
+          >
+            <ul className="min-h-0 overflow-hidden">
+              {recent.map((r, i) => (
+                <li key={r.url} className={i === 0 ? "pt-1" : i === recent.length - 1 ? "pb-1" : undefined}>
+                  <button
+                    type="button"
+                    onClick={() => run(r.url)}
+                    className="group flex w-full items-center gap-3 px-4 py-2.5 text-left transition-colors duration-200 hover:bg-surface-2"
+                  >
+                    {(() => {
+                      const { Icon, cls } = VERDICT_ICON[r.verdict];
+                      return <Icon className={cx("size-4 shrink-0", cls)} stroke={1.75} aria-label={r.verdict} />;
+                    })()}
+                    <span className="min-w-0 flex-1 truncate font-mono text-[13px] text-fg-2 transition-colors group-hover:text-fg">{r.url}</span>
+                    <span className="font-mono text-xs tabular-nums text-muted">{r.risk}</span>
+                    <IconArrowRight
+                      className="size-4 shrink-0 -translate-x-1 text-faint opacity-0 transition-all duration-200 group-hover:translate-x-0 group-hover:opacity-100"
+                      stroke={1.75}
+                      aria-hidden="true"
+                    />
+                  </button>
+                </li>
+              ))}
+            </ul>
+          </div>
         </Card>
       )}
     </div>
@@ -330,7 +356,7 @@ function ErrorCard({ error, onRetry }: { error: ScanError; onRetry: () => void }
     return () => clearTimeout(t);
   }, [wait]);
   return (
-    <Card role="alert" className="enter mt-6 flex flex-col items-start gap-4 p-5 sm:flex-row sm:items-center">
+    <Card role="alert" className="enter mx-auto mt-6 flex max-w-3xl flex-col items-start gap-4 p-5 sm:flex-row sm:items-center">
       <span className="grid size-10 shrink-0 place-items-center rounded-xl bg-danger/10 text-danger">
         <look.Icon className="size-5" stroke={1.75} aria-hidden="true" />
       </span>

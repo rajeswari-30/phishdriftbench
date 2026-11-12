@@ -77,7 +77,7 @@ export function SiteHeader({ github }: { github: string }) {
       <header
         ref={headerRef}
         className={cx(
-          "mx-auto max-w-3xl rounded-[22px] border transition-[background-color,box-shadow,border-color] duration-300",
+          "mx-auto max-w-6xl rounded-[22px] border transition-[background-color,box-shadow,border-color] duration-300",
           scrolled || open
             ? "border-line-2 bg-surface/80 backdrop-blur-xl backdrop-saturate-150"
             : "border-transparent bg-transparent",
@@ -85,7 +85,7 @@ export function SiteHeader({ github }: { github: string }) {
       >
         <div className="flex h-12 items-center gap-2 pr-1.5 pl-2">
           <Link href="/" className="flex items-center gap-2 rounded-full py-1 pr-2 pl-1 text-[15px] font-semibold tracking-tight">
-            <span className="grid size-7 place-items-center rounded-full bg-fg text-bg">
+            <span className="grid size-7 place-items-center rounded-full bg-[linear-gradient(to_bottom,oklch(59%_0.21_285),oklch(47%_0.23_285))] text-white shadow-[inset_0_1px_0_oklch(100%_0_0/0.25)]">
               <Logo className="size-4" />
             </span>
             PhishLens

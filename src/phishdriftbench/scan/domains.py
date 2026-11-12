@@ -152,7 +152,15 @@ def certificate(host: str, info: DomainInfo, port: int = 443) -> None:
             with ctx.wrap_socket(sock, server_hostname=host) as tls:
                 der = tls.getpeercert(binary_form=True)
     except (OSError, ssl.SSLError) as e:
-        info.cert_error = "no TLS on port 443" if isinstance(e, ConnectionRefusedError) else str(e)[:120]
+        # Say what it means for a reader, not what OpenSSL said.
+        if isinstance(e, ConnectionRefusedError):
+            info.cert_error = "No HTTPS on this site"
+        elif isinstance(e, (socket.timeout, TimeoutError)):
+            info.cert_error = "HTTPS handshake timed out"
+        elif isinstance(e, ssl.SSLError):
+            info.cert_error = "No working HTTPS certificate"
+        else:
+            info.cert_error = "Couldn't connect over HTTPS"
         return
     cert = x509.load_der_x509_certificate(der)
 

@@ -19,7 +19,9 @@
   --danger: oklch(55% 0.2 27);
   --warn: oklch(58% 0.14 70);
   --ok: oklch(52% 0.13 152);
-  --accent: oklch(52% 0.14 158);
+  --accent: oklch(54% 0.22 285);
+  --accent-2: oklch(47% 0.23 285);
+  --accent-soft: oklch(96% 0.03 285);
   --shadow: 0 1px 0 oklch(0% 0 0 / 0.03);
   color-scheme: light;
 }
@@ -41,6 +43,8 @@
   --color-warn: var(--warn);
   --color-ok: var(--ok);
   --color-accent: var(--accent);
+  --color-accent-2: var(--accent-2);
+  --color-accent-soft: var(--accent-soft);
   --font-sans: var(--font-inter), ui-sans-serif, system-ui, sans-serif;
   --font-mono: var(--font-geist-mono), ui-monospace, SFMono-Regular, Menlo, monospace;
   --shadow-card: var(--shadow);
@@ -53,7 +57,11 @@ html {
 }
 
 body {
-  background: var(--bg);
+  /* A faint violet wash at the top of every page. */
+  background:
+    radial-gradient(120% 60% at 50% -10%, oklch(54% 0.22 285 / 0.09), transparent 60%),
+    var(--bg);
+  background-repeat: no-repeat;
   color: var(--fg);
   font-family: var(--font-sans);
   font-feature-settings: "cv11", "ss01";
@@ -62,13 +70,27 @@ body {
 }
 
 ::selection {
-  background: var(--fg);
-  color: var(--bg);
+  background: oklch(54% 0.22 285 / 0.2);
+  color: var(--fg);
 }
 
 /* In the base layer so a utility (e.g. focus-visible:outline-none) can
    override it; unlayered CSS would beat every Tailwind utility. */
 @layer base {
+  /* Tailwind's reset leaves buttons with the arrow cursor. */
+  button:not(:disabled),
+  [role="button"],
+  [role="switch"],
+  [role="tab"],
+  [role="menuitem"],
+  summary,
+  label[for],
+  select {
+    cursor: pointer;
+  }
+  :disabled {
+    cursor: not-allowed;
+  }
   :focus-visible {
     outline: 2px solid var(--accent);
     outline-offset: 2px;
@@ -201,13 +223,13 @@ body {
     opacity: 1;
   }
   .docs a:not(.anchor) {
-    color: var(--fg);
+    color: var(--accent-2);
     text-decoration: underline;
-    text-decoration-color: var(--line-2);
+    text-decoration-color: oklch(54% 0.22 285 / 0.3);
     text-underline-offset: 3px;
   }
   .docs a:not(.anchor):hover {
-    text-decoration-color: var(--fg);
+    text-decoration-color: var(--accent);
   }
   .docs strong {
     color: var(--fg);

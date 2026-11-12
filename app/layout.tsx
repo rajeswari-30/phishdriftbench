@@ -35,7 +35,7 @@ export default function RootLayout({ children }: { children: React.ReactNode }) 
           {children}
         </main>
         <footer className="border-t border-line">
-          <div className="mx-auto flex max-w-3xl flex-col gap-3 px-4 py-6 text-[13px] text-muted sm:flex-row sm:items-center sm:px-6">
+          <div className="mx-auto flex max-w-6xl flex-col gap-3 px-4 py-6 text-[13px] text-muted sm:flex-row sm:items-center sm:px-6">
             <span>
               Developed by{" "}
               <a

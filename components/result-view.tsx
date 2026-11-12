@@ -1,7 +1,7 @@
 "use client";
 
 import {
-  IconActivity,
+  IconAdjustmentsHorizontal,
   IconAlertTriangle,
   IconBrowser,
   IconCalendar,
@@ -19,6 +19,8 @@ import {
   IconShieldSearch,
   IconShieldX,
   IconSparkles,
+  IconTrendingDown,
+  IconTrendingUp,
   IconWorld,
   IconWorldWww,
   type Icon as TablerIcon,
@@ -26,7 +28,7 @@ import {
 import { useState } from "react";
 import { reportUrl } from "@/lib/api";
 import type { Finding, ScanResult, Severity, Verdict } from "@/lib/types";
-import { Badge, Card, cx, Metrics, pillClass, RollingNumber, TONE_BG, TONE_TEXT, type Tone } from "./ui";
+import { Badge, Card, CardHeader, cx, Metrics, pillClass, RollingNumber, TONE_BG, TONE_TEXT, type Tone } from "./ui";
 
 const VERDICT: Record<Verdict, { label: string; tone: Tone; Icon: TablerIcon }> = {
   phishing: { label: "Phishing", tone: "danger", Icon: IconShieldX },
@@ -51,89 +53,101 @@ const SEVERITY: Record<Severity, { tone: Tone; label: string }> = {
   good: { tone: "ok", label: "Reassuring" },
 };
 
-const TABS = ["Findings", "Page", "Domain", "Threat lists", "Link text"] as const;
-type Tab = (typeof TABS)[number];
-const TAB_ICON: Record<Tab, TablerIcon> = {
-  Findings: IconListDetails,
-  Page: IconBrowser,
-  Domain: IconWorld,
-  "Threat lists": IconShieldSearch,
-  "Link text": IconLink,
+const TONE_PANEL: Record<Tone, string> = {
+  danger: "bg-danger/[0.06]",
+  warn: "bg-warn/[0.07]",
+  ok: "bg-ok/[0.06]",
+  accent: "bg-accent/[0.06]",
+  neutral: "bg-surface-2",
 };
+
+const VIEWS = [
+  { id: "overview", label: "Overview", Icon: IconListDetails },
+  { id: "advanced", label: "Advanced details", Icon: IconAdjustmentsHorizontal },
+] as const;
+type View = (typeof VIEWS)[number]["id"];
 
 export function ResultView({ result, onRescan }: { result: ScanResult; onRescan: () => void }) {
   const v = VERDICT[result.verdict];
-  const [tab, setTab] = useState<Tab>("Findings");
+  const [view, setView] = useState<View>("overview");
   const [copied, setCopied] = useState(false);
   const moved = result.final_url && result.final_url !== result.url;
   const signals = result.findings.filter((f) => f.weight !== 0).length;
   const age = result.domain.age_days;
+  const p = result.page;
+  const listed = result.intel.filter((i) => i.status === "hit").length;
+  const checked = result.intel.filter((i) => i.status === "hit" || i.status === "clean").length;
 
   return (
-    <section className="enter mt-6 space-y-4" aria-label="Scan result">
+    <section className="enter mt-8 space-y-4" aria-label="Scan result">
       <Card className="overflow-hidden">
-        {/* header */}
-        <div className="flex flex-wrap items-center gap-2 border-b border-line px-4 py-3">
-          <v.Icon className={cx("size-[18px]", TONE_TEXT[v.tone])} stroke={1.75} aria-hidden="true" />
-          <h2 className="text-sm font-semibold">Scan result</h2>
-          <Badge tone={v.tone}>{v.label}</Badge>
-          <div className="flex w-full gap-1.5 overflow-x-auto no-scrollbar sm:ml-auto sm:w-auto">
-            <a href={reportUrl(result.input)} target="_blank" rel="noopener" className={pillClass("ghost", "sm")}>
-              <IconFileText stroke={1.75} aria-hidden="true" />
-              Report
-            </a>
-            <a href={reportUrl(result.input, true)} className={pillClass("ghost", "sm")}>
-              <IconDownload stroke={1.75} aria-hidden="true" />
-              PDF
-            </a>
-            <button
-              type="button"
-              className={pillClass("ghost", "sm")}
-              onClick={async () => {
-                try {
-                  await navigator.clipboard.writeText(window.location.href);
-                  setCopied(true);
-                  setTimeout(() => setCopied(false), 1500);
-                } catch {
-                  /* clipboard blocked */
-                }
-              }}
-            >
-              {copied ? <IconCheck stroke={1.75} aria-hidden="true" /> : <IconShare stroke={1.75} aria-hidden="true" />}
-              {copied ? "Copied" : "Share"}
-            </button>
-            <button type="button" onClick={onRescan} className={pillClass("ghost", "sm")}>
-              <IconRefresh stroke={1.75} aria-hidden="true" />
-              Rescan
-            </button>
-          </div>
-        </div>
-
-        {/* verdict */}
-        <div className="grid gap-5 px-4 py-5 sm:grid-cols-[auto_1fr] sm:items-center sm:gap-8 sm:px-6">
-          <div className="flex items-end gap-2">
-            <RollingNumber value={result.risk} className={cx("text-6xl font-semibold leading-none tracking-tighter tabular-nums sm:text-7xl", TONE_TEXT[v.tone])} />
-            <span className="pb-1.5 text-sm text-muted">/100</span>
-          </div>
-          <div className="min-w-0">
-            <p className="text-[15px] leading-relaxed text-fg">{result.summary}</p>
+        <div className="grid lg:grid-cols-[300px_minmax(0,1fr)]">
+          {/* Verdict: the one thing to read first. */}
+          <div className={cx("flex flex-col justify-center gap-4 border-b border-line p-5 sm:p-6 lg:border-r lg:border-b-0", TONE_PANEL[v.tone])}>
+            <div className={cx("flex items-center gap-2 text-[15px] font-semibold", TONE_TEXT[v.tone])}>
+              <v.Icon className="size-5" stroke={1.75} aria-hidden="true" />
+              <h2>{v.label}</h2>
+            </div>
+            <div className="flex items-end gap-2">
+              <RollingNumber
+                value={result.risk}
+                className={cx("text-7xl font-semibold leading-[0.85] tracking-tighter tabular-nums", TONE_TEXT[v.tone])}
+              />
+              <span className="pb-1 text-sm text-muted">/100 risk</span>
+            </div>
             <RiskMeter risk={result.risk} tone={v.tone} />
           </div>
-        </div>
 
-        <div className="space-y-1 border-t border-line px-4 py-3 font-mono text-xs text-muted sm:px-6">
-          <p className="break-all">{result.url}</p>
-          {moved && <p className="break-all text-fg-2">↳ {result.final_url}</p>}
+          {/* Reason, link and actions. */}
+          <div className="flex min-w-0 flex-col gap-4 p-5 sm:p-6">
+            <div className="flex flex-col gap-3 sm:flex-row sm:items-start sm:justify-between">
+              <p className="text-lg leading-snug font-medium text-pretty text-fg">{result.summary}</p>
+              <div className="flex shrink-0 flex-wrap gap-1.5">
+                <a href={reportUrl(result.input)} target="_blank" rel="noopener" className={pillClass("ghost", "sm")}>
+                  <IconFileText stroke={1.75} aria-hidden="true" />
+                  Report
+                </a>
+                <a href={reportUrl(result.input, true)} className={pillClass("ghost", "sm")} aria-label="Download PDF report">
+                  <IconDownload stroke={1.75} aria-hidden="true" />
+                  PDF
+                </a>
+                <button
+                  type="button"
+                  className={pillClass("ghost", "sm")}
+                  onClick={async () => {
+                    try {
+                      await navigator.clipboard.writeText(window.location.href);
+                      setCopied(true);
+                      setTimeout(() => setCopied(false), 1500);
+                    } catch {
+                      /* clipboard blocked */
+                    }
+                  }}
+                >
+                  {copied ? <IconCheck stroke={1.75} aria-hidden="true" /> : <IconShare stroke={1.75} aria-hidden="true" />}
+                  {copied ? "Copied" : "Share"}
+                </button>
+                <button type="button" onClick={onRescan} className={pillClass("ghost", "sm")} aria-label="Scan again">
+                  <IconRefresh stroke={1.75} aria-hidden="true" />
+                </button>
+              </div>
+            </div>
+            <TopReasons findings={result.findings} />
+            <div className="mt-auto space-y-1 rounded-[10px] border border-line bg-surface-2 px-3 py-2 font-mono text-xs text-muted">
+              <p className="break-all">{result.url}</p>
+              {moved && <p className="break-all text-fg-2">↳ {result.final_url}</p>}
+            </div>
+          </div>
         </div>
 
         <Metrics
+          cols={5}
           items={[
-            { label: "Verdict", value: v.label, tone: v.tone, icon: <v.Icon stroke={1.75} aria-hidden="true" /> },
             {
               label: "Page",
               icon: <IconWorldWww stroke={1.75} aria-hidden="true" />,
-              value: !result.page ? "Skipped" : result.page.fetched ? `HTTP ${result.page.status}` : "Offline",
-              tone: result.page && !result.page.fetched ? "warn" : undefined,
+              value: !p ? "Skipped" : p.fetched ? `HTTP ${p.status}` : "Offline",
+              tone: p && !p.fetched ? "warn" : undefined,
             },
             {
               label: "Domain age",
@@ -141,79 +155,131 @@ export function ResultView({ result, onRescan }: { result: ScanResult; onRescan:
               value: result.domain.hosted_platform ? "Platform" : age == null ? "Unknown" : age >= 730 ? `${Math.floor(age / 365)} yrs` : `${age} days`,
               tone: age != null && age < 90 && !result.domain.hosted_platform ? "danger" : undefined,
             },
-            { label: "Signals", value: signals, icon: <IconActivity stroke={1.75} aria-hidden="true" /> },
+            {
+              label: "Threat lists",
+              icon: <IconShieldSearch stroke={1.75} aria-hidden="true" />,
+              value: listed ? `${listed} listed` : `${checked} clear`,
+              tone: listed ? "danger" : undefined,
+            },
             { label: "Evidence", value: result.evidence[0].toUpperCase() + result.evidence.slice(1), icon: <IconScale stroke={1.75} aria-hidden="true" /> },
             { label: "Time", value: `${(result.elapsed_ms / 1000).toFixed(1)}s`, icon: <IconClock stroke={1.75} aria-hidden="true" /> },
           ]}
         />
-
-        {/* tabs */}
-        <div className="px-2 pt-2 sm:px-3">
-          <div
-            role="tablist"
-            aria-label="Scan details"
-            onKeyDown={(e) => {
-              // Arrow keys move between tabs (WAI-ARIA tabs pattern).
-              const i = TABS.indexOf(tab);
-              const next =
-                e.key === "ArrowRight" ? (i + 1) % TABS.length
-                : e.key === "ArrowLeft" ? (i - 1 + TABS.length) % TABS.length
-                : e.key === "Home" ? 0
-                : e.key === "End" ? TABS.length - 1
-                : -1;
-              if (next < 0) return;
-              e.preventDefault();
-              setTab(TABS[next]);
-              document.getElementById(`tab-${next}`)?.focus();
-            }}
-            className="no-scrollbar flex gap-1 overflow-x-auto rounded-full border border-line bg-surface-2 p-1"
-          >
-            {TABS.map((t, i) => (
-              <button
-                key={t}
-                id={`tab-${i}`}
-                role="tab"
-                type="button"
-                aria-selected={tab === t}
-                aria-controls="tab-panel"
-                tabIndex={tab === t ? 0 : -1}
-                onClick={() => setTab(t)}
-                className="inline-flex flex-1 items-center justify-center gap-1.5 rounded-full px-3 py-1.5 text-[13px] whitespace-nowrap text-muted transition-[color,background-color,box-shadow] duration-200 hover:bg-surface/60 hover:text-fg aria-selected:bg-surface aria-selected:text-fg aria-selected:shadow-[0_0_0_1px_oklch(0%_0_0/0.08)]"
-              >
-                {(() => {
-                  const I = TAB_ICON[t];
-                  return <I className="size-4 shrink-0" stroke={1.75} aria-hidden="true" />;
-                })()}
-                {t}
-                {t === "Findings" && <span className="ml-1.5 font-mono text-[11px] text-faint">{signals}</span>}
-              </button>
-            ))}
-          </div>
-        </div>
-        <div
-          role="tabpanel"
-          id="tab-panel"
-          aria-labelledby={`tab-${TABS.indexOf(tab)}`}
-          tabIndex={0}
-          key={tab}
-          className="enter p-2 focus-visible:outline-offset-[-2px] sm:p-3"
-        >
-          {tab === "Findings" && <Findings findings={result.findings} />}
-          {tab === "Page" && <PagePanel result={result} />}
-          {tab === "Domain" && <DomainPanel result={result} />}
-          {tab === "Threat lists" && <IntelPanel result={result} />}
-          {tab === "Link text" && <UrlPanel result={result} />}
-        </div>
       </Card>
+
+      <div
+        role="tablist"
+        aria-label="Result detail level"
+        onKeyDown={(e) => {
+          if (e.key !== "ArrowRight" && e.key !== "ArrowLeft") return;
+          e.preventDefault();
+          const next = view === "overview" ? "advanced" : "overview";
+          setView(next);
+          document.getElementById(`view-${next}`)?.focus();
+        }}
+        className="inline-flex rounded-full border border-line bg-surface-2 p-1"
+      >
+        {VIEWS.map(({ id, label, Icon }) => (
+          <button
+            key={id}
+            id={`view-${id}`}
+            role="tab"
+            type="button"
+            aria-selected={view === id}
+            aria-controls="view-panel"
+            tabIndex={view === id ? 0 : -1}
+            onClick={() => setView(id)}
+            className="inline-flex items-center gap-1.5 rounded-full px-3.5 py-1.5 text-[13px] whitespace-nowrap text-muted transition-[color,background-color,box-shadow] duration-200 hover:text-fg aria-selected:bg-surface aria-selected:text-fg aria-selected:shadow-[0_0_0_1px_oklch(0%_0_0/0.08)]"
+          >
+            <Icon className="size-4" stroke={1.75} aria-hidden="true" />
+            {label}
+            {id === "overview" && <span className="font-mono text-[11px] text-faint">{signals}</span>}
+          </button>
+        ))}
+      </div>
+
+      <div role="tabpanel" id="view-panel" aria-labelledby={`view-${view}`} key={view} className="enter">
+        {view === "overview" ? (
+          <Card className="overflow-hidden">
+            <CardHeader
+              icon={<IconListDetails stroke={1.75} aria-hidden="true" />}
+              title="Why this score"
+              aside={<Badge>{signals} signals</Badge>}
+            />
+            <div className="p-2">
+              <Findings findings={result.findings} />
+            </div>
+          </Card>
+        ) : (
+          <div className="grid gap-4 lg:grid-cols-2 lg:items-start">
+            <div className="space-y-4">
+              <Card className="overflow-hidden">
+                <CardHeader
+                  icon={<IconBrowser stroke={1.75} aria-hidden="true" />}
+                  title="Page"
+                  aside={!p ? <Badge>Skipped</Badge> : p.fetched ? <Badge tone="ok">HTTP {p.status}</Badge> : <Badge tone="warn">Offline</Badge>}
+                />
+                <PagePanel result={result} />
+              </Card>
+              <Card className="overflow-hidden">
+                <CardHeader icon={<IconLink stroke={1.75} aria-hidden="true" />} title="Link text model" />
+                <UrlPanel result={result} />
+              </Card>
+            </div>
+            <div className="space-y-4">
+              <Card className="overflow-hidden">
+                <CardHeader
+                  icon={<IconWorld stroke={1.75} aria-hidden="true" />}
+                  title="Domain"
+                  aside={<span className="truncate font-mono">{result.domain.domain}</span>}
+                />
+                <DomainPanel result={result} />
+              </Card>
+              <Card className="overflow-hidden">
+                <CardHeader
+                  icon={<IconShieldSearch stroke={1.75} aria-hidden="true" />}
+                  title="Threat lists"
+                  aside={listed ? <Badge tone="danger">{listed} listed</Badge> : <Badge>{checked} checked</Badge>}
+                />
+                <IntelPanel result={result} />
+              </Card>
+            </div>
+          </div>
+        )}
+      </div>
     </section>
+  );
+}
+
+/** The two or three findings that moved the score most toward the verdict,
+ * as short chips under the reason. */
+function TopReasons({ findings }: { findings: Finding[] }) {
+  const top = findings.filter((f) => f.weight > 0).slice(0, 3);
+  const reassuring = top.length ? [] : findings.filter((f) => f.weight < 0).slice(0, 3);
+  const list = top.length ? top : reassuring;
+  if (!list.length) return null;
+  return (
+    <ul className="flex flex-wrap gap-1.5" aria-label="Main reasons">
+      {list.map((f) => {
+        const I = CATEGORY_ICON[f.category];
+        return (
+          <li key={f.id + f.title}>
+            <Badge tone={f.weight > 0 ? (f.weight >= 1.5 ? "danger" : "warn") : "ok"} className="py-1 pr-2.5 text-[12.5px]">
+              <I stroke={1.75} aria-hidden="true" />
+              {f.title}
+            </Badge>
+          </li>
+        );
+      })}
+    </ul>
   );
 }
 
 function RiskMeter({ risk, tone }: { risk: number; tone: Tone }) {
   // Segmented track with the 40 and 70 verdict boundaries marked.
   return (
-    <div className="mt-4" aria-hidden="true">
-      <div className="relative h-1.5 overflow-hidden rounded-full bg-surface-3">
+    <div aria-hidden="true">
+      <div className="relative h-1.5 overflow-hidden rounded-full bg-fg/[0.08]">
         <div
           className={cx("absolute inset-y-0 left-0 rounded-full transition-[width] duration-700 ease-[var(--ease-out)]", TONE_BG[tone])}
           style={{ width: `${Math.max(2, risk)}%` }}
@@ -221,10 +287,10 @@ function RiskMeter({ risk, tone }: { risk: number; tone: Tone }) {
         <span className="absolute inset-y-0 left-[40%] w-0.5 bg-surface" />
         <span className="absolute inset-y-0 left-[70%] w-0.5 bg-surface" />
       </div>
-      <div className="relative mt-1.5 h-3 font-mono text-[10px] text-faint">
-        <span className="absolute left-0">Safe</span>
-        <span className="absolute left-[40%] -translate-x-1/2">Suspicious</span>
-        <span className="absolute left-[70%] -translate-x-1/2 max-sm:hidden">Phishing</span>
+      <div className="relative mt-1.5 h-3 font-mono text-[10px] text-muted">
+        <span className="absolute left-0">0</span>
+        <span className="absolute left-[40%] -translate-x-1/2">40</span>
+        <span className="absolute left-[70%] -translate-x-1/2">70</span>
         <span className="absolute right-0">100</span>
       </div>
     </div>
@@ -248,13 +314,13 @@ function Findings({ findings }: { findings: Finding[] }) {
               aria-expanded={expanded}
               aria-controls={`finding-${i}`}
               onClick={() => setOpen(expanded ? null : key)}
-              className="group grid w-full grid-cols-[auto_1fr_auto_auto] items-center gap-x-3 rounded-xl px-2 py-2.5 text-left transition-colors duration-200 hover:bg-surface-2 aria-expanded:bg-surface-2"
+              className="group grid w-full grid-cols-[auto_1fr_auto_auto] items-start gap-x-3 rounded-xl px-2 py-2.5 text-left transition-colors duration-200 hover:bg-surface-2 aria-expanded:bg-surface-2"
             >
               {(() => {
                 const I = CATEGORY_ICON[f.category];
-                return <I className={cx("size-4", TONE_TEXT[SEVERITY[f.severity].tone])} stroke={1.75} aria-label={f.category} />;
+                return <I className={cx("mt-0.5 size-4", TONE_TEXT[SEVERITY[f.severity].tone])} stroke={1.75} aria-label={f.category} />;
               })()}
-              <span className="flex min-w-0 flex-wrap items-center gap-x-2 gap-y-1 text-[14px] font-medium text-fg">
+              <span className="flex min-w-0 flex-wrap items-center gap-x-2 gap-y-1 text-[14px] leading-5 font-medium text-fg">
                 <span className="min-w-0">{f.title}</span>
                 <Badge tone={SEVERITY[f.severity].tone} className="text-[11px] max-sm:hidden">
                   {SEVERITY[f.severity].label}
@@ -262,7 +328,7 @@ function Findings({ findings }: { findings: Finding[] }) {
               </span>
               <WeightBar weight={f.weight} max={max} />
               <IconChevronDown
-                className={cx("size-4 text-faint transition-[transform,color] duration-200 group-hover:text-fg", expanded && "rotate-180")}
+                className={cx("mt-0.5 size-4 text-faint transition-[transform,color] duration-200 group-hover:text-fg", expanded && "rotate-180")}
                 stroke={1.75}
                 aria-hidden="true"
               />
@@ -278,7 +344,14 @@ function Findings({ findings }: { findings: Finding[] }) {
               )}
             >
               <p className="min-h-0 overflow-hidden px-2 pl-[36px] text-[13px] leading-relaxed text-muted">
-                <span className="block pb-2.5">{f.detail}</span>
+                <span className="block">{f.detail}</span>
+                {f.weight !== 0 && (
+                  <span className="mt-1.5 block pb-2.5 font-mono text-[11.5px] text-faint">
+                    {f.weight > 0 ? "Raises" : "Lowers"} risk, weight {f.weight > 0 ? "+" : ""}
+                    {f.weight.toFixed(1)}
+                  </span>
+                )}
+                {f.weight === 0 && <span className="block pb-2.5" />}
               </p>
             </div>
           </li>
@@ -289,23 +362,33 @@ function Findings({ findings }: { findings: Finding[] }) {
 }
 
 function Empty({ children }: { children: React.ReactNode }) {
-  return <p className="px-2 py-6 text-center text-[13px] text-faint">{children}</p>;
+  return <p className="px-4 py-6 text-center text-[13px] text-muted">{children}</p>;
 }
 
+const IMPACT = [
+  { min: 3, word: "Major" },
+  { min: 1.5, word: "Strong" },
+  { min: 0.6, word: "Moderate" },
+  { min: 0, word: "Minor" },
+];
+
+/** How much a finding moved the score, in words and a bar. The raw
+ * log-odds weight is in the expanded detail, not up front. */
 function WeightBar({ weight, max }: { weight: number; max: number }) {
-  if (!weight) return <span className="w-14 text-right font-mono text-xs text-faint sm:w-20">0</span>;
+  if (!weight) return <span className="w-24 pt-0.5 text-right text-xs text-faint">No effect</span>;
+  const raises = weight > 0;
+  const word = IMPACT.find((l) => Math.abs(weight) >= l.min)!.word;
   const pct = Math.max(10, (Math.abs(weight) / max) * 100);
+  const Trend = raises ? IconTrendingUp : IconTrendingDown;
   return (
-    <div className="flex w-14 flex-col items-end gap-1.5 sm:w-20" title="Log-odds weight: how far this moved the score">
-      <span className={cx("font-mono text-xs tabular-nums", weight > 0 ? "text-danger" : "text-ok")}>
-        {weight > 0 ? "+" : ""}
-        {weight.toFixed(1)}
+    <div className="flex w-24 flex-col items-end gap-1.5 pt-0.5">
+      <span className={cx("inline-flex items-center gap-1 text-xs font-medium", raises ? "text-danger" : "text-ok")}>
+        <Trend className="size-3.5" stroke={2} aria-hidden="true" />
+        {word}
+        <span className="sr-only">{raises ? " increase in risk" : " decrease in risk"}</span>
       </span>
-      <span className="h-1 w-full overflow-hidden rounded-full bg-surface-3">
-        <span
-          className={cx("block h-1 rounded-full", weight > 0 ? "bg-danger" : "ml-auto bg-ok")}
-          style={{ width: `${pct}%` }}
-        />
+      <span className="h-1 w-full overflow-hidden rounded-full bg-surface-3" aria-hidden="true">
+        <span className={cx("block h-1 rounded-full", raises ? "bg-danger" : "ml-auto bg-ok")} style={{ width: `${pct}%` }} />
       </span>
     </div>
   );
@@ -315,7 +398,7 @@ function Rows({ rows }: { rows: [string, React.ReactNode][] }) {
   return (
     <dl className="divide-y divide-line">
       {rows.map(([k, val]) => (
-        <div key={k} className="grid gap-0.5 px-2 py-2.5 sm:grid-cols-[180px_1fr] sm:gap-4">
+        <div key={k} className="grid grid-cols-[minmax(0,38%)_minmax(0,1fr)] gap-3 px-4 py-2.5">
           <dt className="text-[13px] text-muted">{k}</dt>
           <dd className="min-w-0 text-[13px] break-words text-fg">{val ?? <span className="text-faint">Not available</span>}</dd>
         </div>
@@ -396,7 +479,7 @@ function IntelPanel({ result }: { result: ScanResult }) {
     <>
       <ul className="divide-y divide-line">
         {result.intel.map((i) => (
-          <li key={i.source} className="flex flex-wrap items-center gap-x-3 gap-y-1 px-2 py-2.5">
+          <li key={i.source} className="flex flex-wrap items-center gap-x-3 gap-y-1 px-4 py-2.5">
             <span className="text-[13.5px] text-fg">{i.source}</span>
             <Badge tone={INTEL[i.status].tone} className="ml-auto">
               {INTEL[i.status].text}
@@ -414,7 +497,7 @@ function UrlPanel({ result }: { result: ScanResult }) {
   const top = m.signals.filter((s) => s.contribution !== 0).slice(0, 8);
   const max = Math.max(0.01, ...top.map((s) => Math.abs(s.contribution)));
   return (
-    <div className="space-y-3 px-2 py-2">
+    <div className="space-y-3 px-4 py-3">
       <div className="flex flex-wrap gap-1.5">
         <Badge tone={m.ml_score >= m.decision_threshold ? "danger" : "ok"}>Model {(m.ml_score * 100).toFixed(1)}%</Badge>
         <Badge>Threshold {(m.decision_threshold * 100).toFixed(1)}%</Badge>
@@ -433,7 +516,7 @@ function UrlPanel({ result }: { result: ScanResult }) {
       <ul className="space-y-2.5 pt-1">
         {top.map((s) => (
           <li key={s.name} className="grid grid-cols-[1fr_90px_48px] items-center gap-3 text-[13px] sm:grid-cols-[1fr_140px_56px]">
-            <span className="truncate text-fg-2" title={s.label}>
+            <span className="block truncate text-fg-2 first-letter:uppercase" title={s.label}>
               {s.label}
             </span>
             <span className="relative h-1 rounded-full bg-surface-3">
