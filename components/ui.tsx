@@ -16,24 +16,37 @@ export function Card({ className, ...props }: ComponentProps<"div">) {
 
 export function CardHeader({ title, aside, icon }: { title: ReactNode; aside?: ReactNode; icon?: ReactNode }) {
   return (
-    <div className="flex items-center gap-2.5 border-b border-line px-4 py-3">
+    <div className="flex items-center gap-2.5 border-b border-line px-4 py-3 [&>svg]:size-4 [&>svg]:shrink-0 [&>svg]:text-muted">
       {icon}
-      <h3 className="text-sm font-semibold tracking-tight text-fg">{title}</h3>
+      <h2 className="text-sm font-semibold tracking-tight text-fg">{title}</h2>
       {aside && <div className="ml-auto flex items-center gap-2 text-xs text-muted">{aside}</div>}
     </div>
   );
 }
 
+// Ghost buttons are flat white keys: a hairline ring plus a 1px bottom
+// edge, no drop shadow. The primary action is a dark pill with a faint top
+// highlight. Both are drawn with box-shadow rings, not borders, so a hover
+// can change the ring without shifting layout.
+const RING = "shadow-[0_0_0_1px_oklch(0%_0_0/0.09),0_1px_0_oklch(0%_0_0/0.06)]";
 const PILL = {
-  primary: "bg-pill text-pill-fg hover:opacity-90",
-  ghost: "border border-line-2 bg-surface-2 text-fg hover:bg-surface-3",
+  primary:
+    "rounded-full bg-[linear-gradient(to_bottom,oklch(30%_0_0),oklch(16%_0_0))] text-pill-fg shadow-[inset_0_1px_0_oklch(100%_0_0/0.16),0_0_0_1px_oklch(0%_0_0/0.9)] hover:bg-[linear-gradient(to_bottom,oklch(36%_0_0),oklch(22%_0_0))]",
+  ghost: `rounded-[10px] bg-surface text-fg ${RING} hover:bg-surface-2 hover:shadow-[0_0_0_1px_oklch(0%_0_0/0.16),0_1px_0_oklch(0%_0_0/0.08)] [&>svg]:text-muted hover:[&>svg]:text-fg`,
+  danger: `rounded-[10px] bg-surface text-fg-2 ${RING} hover:bg-danger/5 hover:text-danger hover:shadow-[0_0_0_1px_color-mix(in_oklch,var(--danger)_40%,transparent)] [&>svg]:text-muted hover:[&>svg]:text-danger`,
 };
 
-export function pillClass(variant: keyof typeof PILL = "primary", size: "sm" | "md" | "lg" = "md") {
-  const sizes = { sm: "h-8 px-3 text-[13px]", md: "h-9 px-4 text-sm", lg: "h-11 px-5 text-[15px]" };
+export function pillClass(variant: keyof typeof PILL = "primary", size: "xs" | "sm" | "md" | "lg" = "md") {
+  const sizes = {
+    xs: "h-7 px-2.5 text-xs [&>svg]:size-3.5",
+    sm: "h-8 px-2.5 text-[13.5px] [&>svg]:size-4",
+    md: "h-9 px-4 text-sm [&>svg]:size-4",
+    lg: "h-11 px-5 text-[15px] [&>svg]:size-[18px]",
+  };
   return cx(
-    "inline-flex shrink-0 select-none items-center justify-center gap-1.5 whitespace-nowrap rounded-full font-medium",
-    "transition-[transform,opacity,background-color] duration-150 ease-[var(--ease-out)] active:scale-[0.96]",
+    "inline-flex shrink-0 select-none items-center justify-center gap-1.5 whitespace-nowrap font-normal [&>svg]:shrink-0 [&>svg]:transition-colors",
+    "transition-[transform,background-color,box-shadow,color] duration-200 ease-[var(--ease-out)] active:scale-[0.96]",
+    "focus-visible:outline-none focus-visible:ring-4 focus-visible:ring-accent/20",
     "disabled:pointer-events-none disabled:opacity-40",
     sizes[size],
     PILL[variant],
@@ -44,7 +57,7 @@ export function Badge({ children, tone = "neutral", className }: { children: Rea
   return (
     <span
       className={cx(
-        "inline-flex items-center gap-1 rounded-full border px-2 py-0.5 text-xs leading-4",
+        "inline-flex items-center gap-1 rounded-full border px-2 py-0.5 text-xs leading-4 [&>svg]:size-3.5 [&>svg]:shrink-0",
         TONE_BADGE[tone],
         className,
       )}
@@ -100,14 +113,17 @@ export function StatusIcon({ state, tone = "ok" }: { state: "pending" | "active"
 }
 
 /** A strip of labelled figures separated by hairlines, wrapping on small screens. */
-export function Metrics({ items }: { items: { label: string; value: ReactNode; tone?: Tone }[] }) {
+export function Metrics({ items }: { items: { label: string; value: ReactNode; tone?: Tone; icon?: ReactNode }[] }) {
   return (
     // A 1px gap over a line-coloured background draws every hairline, at
     // every column count, without per-breakpoint border rules.
     <dl className="grid grid-cols-2 gap-px border-b border-line bg-line sm:grid-cols-3 lg:grid-cols-6">
       {items.map((m) => (
         <div key={m.label} className="bg-surface px-4 py-3">
-          <dt className="text-xs text-muted">{m.label}</dt>
+          <dt className="flex items-center gap-1.5 text-xs text-muted [&>svg]:size-3.5 [&>svg]:shrink-0">
+            {m.icon}
+            {m.label}
+          </dt>
           <dd className={cx("mt-1 truncate text-[15px] font-medium tabular-nums", m.tone ? TONE_TEXT[m.tone] : "text-fg")}>
             {m.value}
           </dd>

@@ -1,21 +1,35 @@
 import type { Health, ScanResult } from "./types";
+import { scanResultShape } from "./validate";
 
-export class ScanError extends Error {}
+/** Why a scan failed, so the UI can say the right thing in the right place:
+ * an input problem belongs under the field, everything else in a card with
+ * a way to retry. */
+export type ScanErrorKind = "input" | "network" | "offline" | "rate" | "server" | "unexpected";
 
-async function detail(res: Response): Promise<string> {
+export class ScanError extends Error {
+  constructor(
+    public kind: ScanErrorKind,
+    message: string,
+    public retryAfter?: number,
+  ) {
+    super(message);
+  }
+}
+
+async function detail(res: Response): Promise<string | null> {
   try {
     const body = await res.json();
     if (typeof body?.detail === "string") return body.detail;
-    if (Array.isArray(body?.detail)) return "That doesn't look like a web address.";
   } catch {
     /* not JSON */
   }
-  if (res.status === 429) return "Too many scans. Wait a minute and try again.";
-  if (res.status >= 500) return "The scanner hit an error. Try again in a moment.";
-  return `Request failed (HTTP ${res.status}).`;
+  return null;
 }
 
 export async function scan(url: string, deep: boolean, signal?: AbortSignal): Promise<ScanResult> {
+  if (typeof navigator !== "undefined" && navigator.onLine === false) {
+    throw new ScanError("offline", "You're offline. Reconnect and try again.");
+  }
   let res: Response;
   try {
     res = await fetch("/api/scan", {
@@ -26,10 +40,31 @@ export async function scan(url: string, deep: boolean, signal?: AbortSignal): Pr
     });
   } catch (e) {
     if ((e as Error).name === "AbortError") throw e;
-    throw new ScanError("Couldn't reach the scanner. Check your connection and try again.");
+    throw new ScanError("network", "Couldn't reach the scanner. Check your connection and try again.");
   }
-  if (!res.ok) throw new ScanError(await detail(res));
-  return res.json();
+
+  if (res.status === 400 || res.status === 422) {
+    throw new ScanError("input", (await detail(res)) ?? "That doesn't look like a web address.");
+  }
+  if (res.status === 429) {
+    const after = Number(res.headers.get("retry-after")) || 60;
+    throw new ScanError("rate", "Too many scans in a short time. Wait a moment, then try again.", after);
+  }
+  if (!res.ok) {
+    throw new ScanError("server", "The scanner ran into a problem on its side. Try again in a moment.");
+  }
+
+  let body: unknown;
+  try {
+    body = await res.json();
+  } catch {
+    throw new ScanError("unexpected", "The scanner sent back something unreadable. Try again.");
+  }
+  const parsed = scanResultShape.safeParse(body);
+  if (!parsed.success) {
+    throw new ScanError("unexpected", "The scanner's answer was incomplete. Try again.");
+  }
+  return body as ScanResult;
 }
 
 export async function health(): Promise<Health | null> {

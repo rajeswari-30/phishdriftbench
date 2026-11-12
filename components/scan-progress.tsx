@@ -33,7 +33,7 @@ export function ScanProgress({ url, deep }: { url: string; deep: boolean }) {
         {steps.map((s, i) => (
           <li key={s} className="flex items-center gap-3 rounded-lg px-2 py-1.5 text-[13.5px]">
             <StatusIcon state={i < at ? "done" : i === at ? "active" : "pending"} />
-            <span className={i < at ? "text-muted line-through decoration-faint/60" : i === at ? "shimmer" : "text-faint"}>
+            <span className={i < at ? "text-muted line-through decoration-faint/60" : i === at ? "shimmer" : "text-muted"}>
               {s}
             </span>
           </li>

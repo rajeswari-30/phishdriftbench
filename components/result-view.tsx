@@ -1,14 +1,45 @@
 "use client";
 
+import {
+  IconActivity,
+  IconAlertTriangle,
+  IconBrowser,
+  IconCalendar,
+  IconCheck,
+  IconChevronDown,
+  IconClock,
+  IconDownload,
+  IconFileText,
+  IconLink,
+  IconListDetails,
+  IconRefresh,
+  IconScale,
+  IconShare,
+  IconShieldCheck,
+  IconShieldSearch,
+  IconShieldX,
+  IconSparkles,
+  IconWorld,
+  IconWorldWww,
+  type Icon as TablerIcon,
+} from "@tabler/icons-react";
 import { useState } from "react";
 import { reportUrl } from "@/lib/api";
 import type { Finding, ScanResult, Severity, Verdict } from "@/lib/types";
 import { Badge, Card, cx, Metrics, pillClass, RollingNumber, TONE_BG, TONE_TEXT, type Tone } from "./ui";
 
-const VERDICT: Record<Verdict, { label: string; tone: Tone }> = {
-  phishing: { label: "Phishing", tone: "danger" },
-  suspicious: { label: "Suspicious", tone: "warn" },
-  safe: { label: "Looks safe", tone: "ok" },
+const VERDICT: Record<Verdict, { label: string; tone: Tone; Icon: TablerIcon }> = {
+  phishing: { label: "Phishing", tone: "danger", Icon: IconShieldX },
+  suspicious: { label: "Suspicious", tone: "warn", Icon: IconAlertTriangle },
+  safe: { label: "Looks safe", tone: "ok", Icon: IconShieldCheck },
+};
+
+const CATEGORY_ICON: Record<Finding["category"], TablerIcon> = {
+  url: IconLink,
+  domain: IconWorld,
+  page: IconBrowser,
+  intel: IconShieldSearch,
+  ai: IconSparkles,
 };
 
 const SEVERITY: Record<Severity, { tone: Tone; label: string }> = {
@@ -22,6 +53,13 @@ const SEVERITY: Record<Severity, { tone: Tone; label: string }> = {
 
 const TABS = ["Findings", "Page", "Domain", "Threat lists", "Link text"] as const;
 type Tab = (typeof TABS)[number];
+const TAB_ICON: Record<Tab, TablerIcon> = {
+  Findings: IconListDetails,
+  Page: IconBrowser,
+  Domain: IconWorld,
+  "Threat lists": IconShieldSearch,
+  "Link text": IconLink,
+};
 
 export function ResultView({ result, onRescan }: { result: ScanResult; onRescan: () => void }) {
   const v = VERDICT[result.verdict];
@@ -36,14 +74,16 @@ export function ResultView({ result, onRescan }: { result: ScanResult; onRescan:
       <Card className="overflow-hidden">
         {/* header */}
         <div className="flex flex-wrap items-center gap-2 border-b border-line px-4 py-3">
-          <span className={cx("size-2 rounded-full", TONE_BG[v.tone])} />
+          <v.Icon className={cx("size-[18px]", TONE_TEXT[v.tone])} stroke={1.75} aria-hidden="true" />
           <h2 className="text-sm font-semibold">Scan result</h2>
           <Badge tone={v.tone}>{v.label}</Badge>
           <div className="flex w-full gap-1.5 overflow-x-auto no-scrollbar sm:ml-auto sm:w-auto">
             <a href={reportUrl(result.input)} target="_blank" rel="noopener" className={pillClass("ghost", "sm")}>
+              <IconFileText stroke={1.75} aria-hidden="true" />
               Report
             </a>
             <a href={reportUrl(result.input, true)} className={pillClass("ghost", "sm")}>
+              <IconDownload stroke={1.75} aria-hidden="true" />
               PDF
             </a>
             <button
@@ -59,9 +99,11 @@ export function ResultView({ result, onRescan }: { result: ScanResult; onRescan:
                 }
               }}
             >
+              {copied ? <IconCheck stroke={1.75} aria-hidden="true" /> : <IconShare stroke={1.75} aria-hidden="true" />}
               {copied ? "Copied" : "Share"}
             </button>
             <button type="button" onClick={onRescan} className={pillClass("ghost", "sm")}>
+              <IconRefresh stroke={1.75} aria-hidden="true" />
               Rescan
             </button>
           </div>
@@ -86,41 +128,76 @@ export function ResultView({ result, onRescan }: { result: ScanResult; onRescan:
 
         <Metrics
           items={[
-            { label: "Verdict", value: v.label, tone: v.tone },
+            { label: "Verdict", value: v.label, tone: v.tone, icon: <v.Icon stroke={1.75} aria-hidden="true" /> },
             {
               label: "Page",
+              icon: <IconWorldWww stroke={1.75} aria-hidden="true" />,
               value: !result.page ? "Skipped" : result.page.fetched ? `HTTP ${result.page.status}` : "Offline",
               tone: result.page && !result.page.fetched ? "warn" : undefined,
             },
             {
               label: "Domain age",
+              icon: <IconCalendar stroke={1.75} aria-hidden="true" />,
               value: result.domain.hosted_platform ? "Platform" : age == null ? "Unknown" : age >= 730 ? `${Math.floor(age / 365)} yrs` : `${age} days`,
               tone: age != null && age < 90 && !result.domain.hosted_platform ? "danger" : undefined,
             },
-            { label: "Signals", value: signals },
-            { label: "Evidence", value: result.evidence[0].toUpperCase() + result.evidence.slice(1) },
-            { label: "Time", value: `${(result.elapsed_ms / 1000).toFixed(1)}s` },
+            { label: "Signals", value: signals, icon: <IconActivity stroke={1.75} aria-hidden="true" /> },
+            { label: "Evidence", value: result.evidence[0].toUpperCase() + result.evidence.slice(1), icon: <IconScale stroke={1.75} aria-hidden="true" /> },
+            { label: "Time", value: `${(result.elapsed_ms / 1000).toFixed(1)}s`, icon: <IconClock stroke={1.75} aria-hidden="true" /> },
           ]}
         />
 
         {/* tabs */}
         <div className="px-2 pt-2 sm:px-3">
-          <div role="tablist" className="no-scrollbar flex gap-1 overflow-x-auto rounded-full border border-line bg-surface-2 p-1">
-            {TABS.map((t) => (
+          <div
+            role="tablist"
+            aria-label="Scan details"
+            onKeyDown={(e) => {
+              // Arrow keys move between tabs (WAI-ARIA tabs pattern).
+              const i = TABS.indexOf(tab);
+              const next =
+                e.key === "ArrowRight" ? (i + 1) % TABS.length
+                : e.key === "ArrowLeft" ? (i - 1 + TABS.length) % TABS.length
+                : e.key === "Home" ? 0
+                : e.key === "End" ? TABS.length - 1
+                : -1;
+              if (next < 0) return;
+              e.preventDefault();
+              setTab(TABS[next]);
+              document.getElementById(`tab-${next}`)?.focus();
+            }}
+            className="no-scrollbar flex gap-1 overflow-x-auto rounded-full border border-line bg-surface-2 p-1"
+          >
+            {TABS.map((t, i) => (
               <button
                 key={t}
+                id={`tab-${i}`}
                 role="tab"
+                type="button"
                 aria-selected={tab === t}
+                aria-controls="tab-panel"
+                tabIndex={tab === t ? 0 : -1}
                 onClick={() => setTab(t)}
-                className="flex-1 rounded-full px-3 py-1.5 text-[13px] whitespace-nowrap text-muted transition-colors hover:text-fg aria-selected:bg-surface aria-selected:text-fg aria-selected:shadow-card"
+                className="inline-flex flex-1 items-center justify-center gap-1.5 rounded-full px-3 py-1.5 text-[13px] whitespace-nowrap text-muted transition-[color,background-color,box-shadow] duration-200 hover:bg-surface/60 hover:text-fg aria-selected:bg-surface aria-selected:text-fg aria-selected:shadow-[0_0_0_1px_oklch(0%_0_0/0.08)]"
               >
+                {(() => {
+                  const I = TAB_ICON[t];
+                  return <I className="size-4 shrink-0" stroke={1.75} aria-hidden="true" />;
+                })()}
                 {t}
                 {t === "Findings" && <span className="ml-1.5 font-mono text-[11px] text-faint">{signals}</span>}
               </button>
             ))}
           </div>
         </div>
-        <div role="tabpanel" key={tab} className="enter p-2 sm:p-3">
+        <div
+          role="tabpanel"
+          id="tab-panel"
+          aria-labelledby={`tab-${TABS.indexOf(tab)}`}
+          tabIndex={0}
+          key={tab}
+          className="enter p-2 focus-visible:outline-offset-[-2px] sm:p-3"
+        >
           {tab === "Findings" && <Findings findings={result.findings} />}
           {tab === "Page" && <PagePanel result={result} />}
           {tab === "Domain" && <DomainPanel result={result} />}
@@ -169,10 +246,14 @@ function Findings({ findings }: { findings: Finding[] }) {
             <button
               type="button"
               aria-expanded={expanded}
+              aria-controls={`finding-${i}`}
               onClick={() => setOpen(expanded ? null : key)}
-              className="grid w-full grid-cols-[auto_1fr_auto_auto] items-center gap-x-3 rounded-xl px-2 py-2.5 text-left transition-colors hover:bg-surface-2"
+              className="group grid w-full grid-cols-[auto_1fr_auto_auto] items-center gap-x-3 rounded-xl px-2 py-2.5 text-left transition-colors duration-200 hover:bg-surface-2 aria-expanded:bg-surface-2"
             >
-              <span className={cx("size-1.5 rounded-full", TONE_BG[SEVERITY[f.severity].tone])} aria-hidden="true" />
+              {(() => {
+                const I = CATEGORY_ICON[f.category];
+                return <I className={cx("size-4", TONE_TEXT[SEVERITY[f.severity].tone])} stroke={1.75} aria-label={f.category} />;
+              })()}
               <span className="flex min-w-0 flex-wrap items-center gap-x-2 gap-y-1 text-[14px] font-medium text-fg">
                 <span className="min-w-0">{f.title}</span>
                 <Badge tone={SEVERITY[f.severity].tone} className="text-[11px] max-sm:hidden">
@@ -180,21 +261,23 @@ function Findings({ findings }: { findings: Finding[] }) {
                 </Badge>
               </span>
               <WeightBar weight={f.weight} max={max} />
-              <svg
-                viewBox="0 0 16 16"
-                className={cx("size-3.5 text-faint transition-transform duration-200", expanded && "rotate-180")}
+              <IconChevronDown
+                className={cx("size-4 text-faint transition-[transform,color] duration-200 group-hover:text-fg", expanded && "rotate-180")}
+                stroke={1.75}
                 aria-hidden="true"
-              >
-                <path d="M4 6l4 4 4-4" fill="none" stroke="currentColor" strokeWidth="1.6" strokeLinecap="round" strokeLinejoin="round" />
-              </svg>
+              />
             </button>
             <div
+              id={`finding-${i}`}
+              role="region"
+              aria-label={f.title}
+              inert={!expanded}
               className={cx(
                 "grid transition-[grid-template-rows,opacity] duration-300 ease-[var(--ease-out)]",
                 expanded ? "grid-rows-[1fr] opacity-100" : "grid-rows-[0fr] opacity-0",
               )}
             >
-              <p className="min-h-0 overflow-hidden px-2 pl-[26px] text-[13px] leading-relaxed text-muted">
+              <p className="min-h-0 overflow-hidden px-2 pl-[36px] text-[13px] leading-relaxed text-muted">
                 <span className="block pb-2.5">{f.detail}</span>
               </p>
             </div>
