@@ -6,15 +6,16 @@ import { forget, loadRecent, remember, type RecentScan } from "@/lib/history";
 import type { ScanResult } from "@/lib/types";
 import { ResultView } from "./result-view";
 import { ScanProgress } from "./scan-progress";
+import { Card, CardHeader, cx, pillClass, TONE_BG } from "./ui";
 
 const EXAMPLES = [
-  { label: "a phishing link", url: "http://paypal-secure-login-verify.account-update.xyz/signin" },
-  { label: "a real site", url: "https://github.com/login" },
-  { label: "a short link", url: "https://bit.ly/3xK9zQ2" },
-  { label: "a look-alike", url: "https://xn--pple-43d.com" },
+  { label: "Phishing link", url: "http://paypal-secure-login-verify.account-update.xyz/signin" },
+  { label: "Real site", url: "https://github.com/login" },
+  { label: "Short link", url: "https://bit.ly/3xK9zQ2" },
+  { label: "Look-alike", url: "https://xn--pple-43d.com" },
 ];
 
-const DOT: Record<string, string> = { phishing: "bg-phish", suspicious: "bg-unsure", safe: "bg-legit" };
+const VERDICT_TONE = { phishing: "danger", suspicious: "warn", safe: "ok" } as const;
 
 type State =
   | { kind: "idle" }
@@ -28,9 +29,25 @@ export function Scanner() {
   const [state, setState] = useState<State>({ kind: "idle" });
   const [recent, setRecent] = useState<RecentScan[]>([]);
   const inflight = useRef<AbortController | null>(null);
+  const input = useRef<HTMLInputElement>(null);
   const resultRef = useRef<HTMLDivElement>(null);
 
-  useEffect(() => setRecent(loadRecent()), []);
+  useEffect(() => {
+    setRecent(loadRecent());
+  }, []);
+
+  // ⌘K / Ctrl+K focuses the link field from anywhere on the page.
+  useEffect(() => {
+    const onKey = (e: KeyboardEvent) => {
+      if ((e.metaKey || e.ctrlKey) && e.key.toLowerCase() === "k") {
+        e.preventDefault();
+        input.current?.focus();
+        input.current?.select();
+      }
+    };
+    window.addEventListener("keydown", onKey);
+    return () => window.removeEventListener("keydown", onKey);
+  }, []);
 
   const run = useCallback(
     async (url: string) => {
@@ -41,21 +58,16 @@ export function Scanner() {
       const ctrl = new AbortController();
       inflight.current = ctrl;
       setState({ kind: "scanning", url: target, deep });
+      requestAnimationFrame(() => resultRef.current?.scrollIntoView({ behavior: "smooth", block: "nearest" }));
       try {
         const result = await scan(target, deep, ctrl.signal);
         setState({ kind: "done", result });
         setRecent(remember(result));
-        const params = new URLSearchParams({ url: target });
-        window.history.replaceState(null, "", `/?${params}`);
-        requestAnimationFrame(() =>
-          resultRef.current?.scrollIntoView({ behavior: "smooth", block: "start" }),
-        );
+        window.history.replaceState(null, "", `/?${new URLSearchParams({ url: target })}`);
+        requestAnimationFrame(() => resultRef.current?.scrollIntoView({ behavior: "smooth", block: "start" }));
       } catch (e) {
         if ((e as Error).name === "AbortError") return;
-        setState({
-          kind: "error",
-          message: e instanceof ScanError ? e.message : "Something went wrong. Try again.",
-        });
+        setState({ kind: "error", message: e instanceof ScanError ? e.message : "Something went wrong. Try again." });
       }
     },
     [deep],
@@ -65,7 +77,6 @@ export function Scanner() {
   useEffect(() => {
     const shared = new URLSearchParams(window.location.search).get("url");
     if (shared) run(shared);
-    // run once on mount
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, []);
 
@@ -73,75 +84,71 @@ export function Scanner() {
 
   return (
     <div>
-      <form
-        onSubmit={(e) => {
-          e.preventDefault();
-          run(value);
-        }}
-        className="flex flex-col gap-2.5 sm:flex-row"
-        autoComplete="off"
-      >
-        <label htmlFor="url" className="sr-only">
-          Link to check
-        </label>
-        <input
-          id="url"
-          type="text"
-          inputMode="url"
-          spellCheck={false}
-          autoFocus
-          placeholder="Paste a link, e.g. https://example.com/login"
-          value={value}
-          onChange={(e) => setValue(e.target.value)}
-          className="h-13 min-w-0 flex-1 rounded-xl border border-rule-2 bg-card px-4 font-mono text-[15px] text-ink shadow-sm outline-none transition placeholder:text-faint focus:border-ink focus:ring-4 focus:ring-ink/5"
-        />
-        <button
-          type="submit"
-          disabled={busy || !value.trim()}
-          className="h-13 rounded-xl bg-ink px-6 text-[15px] font-medium text-paper transition active:scale-[0.97] disabled:opacity-50"
+      <Card className="overflow-hidden transition-shadow has-[input:focus-visible]:border-line-2 has-[input:focus-visible]:ring-4 has-[input:focus-visible]:ring-accent/15">
+        <form
+          onSubmit={(e) => {
+            e.preventDefault();
+            run(value);
+          }}
+          autoComplete="off"
+          className="flex items-center gap-2 p-2 pl-4"
         >
-          {busy ? "Scanning…" : "Scan link"}
-        </button>
-      </form>
-
-      <div className="mt-3 flex flex-wrap items-center gap-x-4 gap-y-2 text-sm text-muted">
-        <label className="inline-flex cursor-pointer select-none items-center gap-2">
+          <svg viewBox="0 0 24 24" className="size-[18px] shrink-0 text-muted" aria-hidden="true">
+            <path
+              d="M10 14a4.5 4.5 0 006.4 0l3-3a4.5 4.5 0 00-6.4-6.4l-1 1M14 10a4.5 4.5 0 00-6.4 0l-3 3a4.5 4.5 0 006.4 6.4l1-1"
+              fill="none"
+              stroke="currentColor"
+              strokeWidth="1.8"
+              strokeLinecap="round"
+            />
+          </svg>
+          <label htmlFor="url" className="sr-only">
+            Link to check
+          </label>
           <input
-            type="checkbox"
-            checked={deep}
-            onChange={(e) => setDeep(e.target.checked)}
-            className="size-4 accent-[var(--ink)]"
+            ref={input}
+            id="url"
+            type="text"
+            inputMode="url"
+            enterKeyHint="go"
+            spellCheck={false}
+            autoFocus
+            placeholder="Paste a link"
+            value={value}
+            onChange={(e) => setValue(e.target.value)}
+            onKeyDown={(e) => e.key === "Escape" && setValue("")}
+            className="h-10 min-w-0 flex-1 bg-transparent font-mono text-[14px] text-fg outline-none focus-visible:outline-none placeholder:font-sans placeholder:text-faint"
           />
-          Visit the page safely
-        </label>
-        <span className="hidden text-faint sm:inline">·</span>
-        <span>
-          Try{" "}
-          {EXAMPLES.map((ex, i) => (
-            <span key={ex.url}>
-              <button
-                type="button"
-                onClick={() => run(ex.url)}
-                className="text-ink-2 underline decoration-rule-2 underline-offset-4 transition-colors hover:decoration-ink"
-              >
+          <button type="submit" disabled={busy || !value.trim()} className={pillClass("primary", "md")}>
+            {busy ? "Scanning" : "Scan"}
+          </button>
+        </form>
+        <div className="flex flex-col gap-3 border-t border-line bg-surface-2/50 px-4 py-3 sm:flex-row sm:items-center">
+          <Switch checked={deep} onChange={setDeep} label="Deep scan" />
+          <div className="flex flex-wrap gap-1.5 sm:ml-auto sm:justify-end">
+            {EXAMPLES.map((ex) => (
+              <button key={ex.url} type="button" onClick={() => run(ex.url)} className={pillClass("ghost", "sm")}>
                 {ex.label}
               </button>
-              {i < EXAMPLES.length - 1 ? <span className="mx-1.5 text-faint">·</span> : null}
-            </span>
-          ))}
-        </span>
-      </div>
-      <p className="mt-3 text-[13px] leading-relaxed text-faint">
-        {deep
-          ? "The scanner reads the page's HTML from our server and never runs its scripts. Your browser never opens the link."
-          : "Link-only mode: nothing is fetched, only the address and public lookups are used."}{" "}
-        Don&apos;t paste links that contain private tokens.
-      </p>
+            ))}
+          </div>
+        </div>
+      </Card>
+      <ul className="mt-3 flex flex-wrap justify-center gap-x-4 gap-y-1 text-xs text-faint" aria-label="Privacy">
+        {(deep ? ["Scripts never run", "Your browser never opens it", "No private links"] : ["Nothing fetched", "Link and lookups only"]).map(
+          (t) => (
+            <li key={t} className="flex items-center gap-1.5">
+              <span className="size-1 rounded-full bg-faint" aria-hidden="true" />
+              {t}
+            </li>
+          ),
+        )}
+      </ul>
 
       <div ref={resultRef} className="scroll-mt-20">
         {state.kind === "scanning" && <ScanProgress url={state.url} deep={state.deep} />}
         {state.kind === "error" && (
-          <div role="alert" className="rise mt-10 rounded-xl border border-phish/30 bg-phish-soft px-4 py-3 text-phish-ink">
+          <div role="alert" className="enter mt-6 rounded-[18px] border border-danger/30 bg-danger/10 px-4 py-3 text-sm text-danger">
             {state.message}
           </div>
         )}
@@ -149,37 +156,69 @@ export function Scanner() {
       </div>
 
       {recent.length > 0 && state.kind !== "scanning" && (
-        <section className="mt-14">
-          <div className="mb-3 flex items-baseline justify-between">
-            <h2 className="text-sm font-medium text-muted">Recent scans on this device</h2>
-            <button
-              type="button"
-              onClick={() => {
-                forget();
-                setRecent([]);
-              }}
-              className="text-xs text-faint hover:text-ink"
-            >
-              Clear
-            </button>
-          </div>
-          <ul className="divide-y divide-rule rounded-xl border border-rule bg-card">
+        <Card className="enter mt-8 overflow-hidden">
+          <CardHeader
+            title="Recent scans"
+            aside={
+              <>
+                <span className="tabular-nums">{recent.length}</span>
+                <button
+                  type="button"
+                  onClick={() => {
+                    forget();
+                    setRecent([]);
+                  }}
+                  className="rounded-full px-2 py-0.5 transition-colors hover:bg-surface-3 hover:text-fg"
+                >
+                  Clear
+                </button>
+              </>
+            }
+          />
+          <ul className="py-1">
             {recent.map((r) => (
               <li key={r.url}>
                 <button
                   type="button"
                   onClick={() => run(r.url)}
-                  className="flex w-full items-center gap-3 px-4 py-2.5 text-left transition-colors hover:bg-paper-2"
+                  className="flex w-full items-center gap-3 px-4 py-2 text-left transition-colors hover:bg-surface-2"
                 >
-                  <span className={`size-2 shrink-0 rounded-full ${DOT[r.verdict]}`} />
-                  <span className="min-w-0 flex-1 truncate font-mono text-[13px] text-ink-2">{r.url}</span>
+                  <span className={cx("size-1.5 shrink-0 rounded-full", TONE_BG[VERDICT_TONE[r.verdict]])} />
+                  <span className="min-w-0 flex-1 truncate font-mono text-[13px] text-fg-2">{r.url}</span>
                   <span className="font-mono text-xs tabular-nums text-muted">{r.risk}</span>
                 </button>
               </li>
             ))}
           </ul>
-        </section>
+        </Card>
       )}
     </div>
+  );
+}
+
+function Switch({ checked, onChange, label }: { checked: boolean; onChange: (v: boolean) => void; label: string }) {
+  return (
+    <button
+      type="button"
+      role="switch"
+      aria-checked={checked}
+      onClick={() => onChange(!checked)}
+      className="group inline-flex shrink-0 items-center gap-2.5 text-[13px] text-fg-2"
+    >
+      <span
+        className={cx(
+          "relative h-5 w-9 rounded-full border transition-colors duration-200",
+          checked ? "border-transparent bg-accent" : "border-line-2 bg-surface-3",
+        )}
+      >
+        <span
+          className={cx(
+            "absolute top-1/2 left-0.5 size-3.5 -translate-y-1/2 rounded-full bg-white shadow transition-transform duration-300 ease-[var(--ease-spring)]",
+            checked && "translate-x-4",
+          )}
+        />
+      </span>
+      {label}
+    </button>
   );
 }

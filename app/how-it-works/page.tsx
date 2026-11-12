@@ -1,106 +1,121 @@
 import type { Metadata } from "next";
-import Link from "next/link";
+import { Badge, Card, CardHeader, cx, Metrics, TONE_BG, type Tone } from "@/components/ui";
 
 export const metadata: Metadata = { title: "How it works" };
 
-const LAYERS = [
-  {
-    n: "01",
-    title: "Threat lists",
-    body: "The link is checked against OpenPhish's live feed, and against Google Safe Browsing, URLhaus and VirusTotal when they are configured. A listing settles it: the score goes to 97 or above. Not being listed counts for very little, because most phishing links live for hours and are never reported.",
-  },
-  {
-    n: "02",
-    title: "The page, read safely",
-    body: "Our server fetches the page's HTML, re-checking every redirect so a link can never point the scanner at a private network. Nothing on the page runs. We look for what a phishing page cannot do without: a password or card form, a claim to be a brand it is not hosted by, a form that posts to a Telegram bot or another site, links copied from the real brand, and the warning page a host such as Cloudflare puts up once it has confirmed a site is phishing.",
-  },
-  {
-    n: "03",
-    title: "The domain",
-    body: "Registration age from RDAP, the TLS certificate, and DNS. Phishing domains are usually days old; a domain registered a decade ago is rarely a kit's own. On free hosting platforms like vercel.app or pages.dev the platform's age says nothing, so it is not used.",
-  },
-  {
-    n: "04",
-    title: "The link text",
-    body: "The lexical XGBoost model from the PhishDriftBench paper scores the URL's shape, with rules ahead of it for look-alike characters, brand squatting, shorteners and pages anyone can publish. Its influence is capped: shape alone should never convict a link.",
-  },
-  {
-    n: "05",
-    title: "AI review (optional)",
-    body: "When an Anthropic API key is configured, Claude reads the page's title, forms and visible text and says which brand it imitates and why. The page text is treated as untrusted evidence, and the review only adjusts the score: it can never mark a link safe on its own.",
-  },
+const CHECKS: { n: string; title: string; tone: Tone; tags: string[] }[] = [
+  { n: "01", title: "Threat lists", tone: "danger", tags: ["OpenPhish", "Safe Browsing", "URLhaus", "VirusTotal"] },
+  { n: "02", title: "Page scan", tone: "warn", tags: ["Password forms", "Fake brands", "Data drops", "Cloaking", "Host warnings"] },
+  { n: "03", title: "Domain", tone: "accent", tags: ["Age", "Certificate", "DNS"] },
+  { n: "04", title: "Link text", tone: "neutral", tags: ["XGBoost", "Look-alikes", "Squatting", "Shorteners"] },
+  { n: "05", title: "AI review", tone: "ok", tags: ["Optional", "Brand match", "Never clears a link"] },
+];
+
+const SCALE: { range: string; label: string; tone: Tone; width: string }[] = [
+  { range: "0–39", label: "Looks safe", tone: "ok", width: "40%" },
+  { range: "40–69", label: "Suspicious", tone: "warn", width: "30%" },
+  { range: "70–100", label: "Phishing", tone: "danger", width: "30%" },
 ];
 
 export default function HowItWorks() {
   return (
-    <div className="mx-auto max-w-3xl px-4 pb-24 pt-16 sm:px-6 sm:pt-20">
-      <p className="mb-5 font-mono text-[12.5px] text-muted">How it works</p>
-      <h1 className="text-balance text-4xl font-semibold tracking-[-0.03em] sm:text-5xl">
-        Five kinds of evidence, one score you can check.
-      </h1>
-      <p className="mt-5 max-w-xl text-lg leading-relaxed text-muted">
-        Every check adds or subtracts a weight. The weights add up to the score, so the findings you see are the whole
-        reason for it.
-      </p>
+    <div className="mx-auto max-w-3xl space-y-5 px-4 pt-10 pb-24 sm:px-6 sm:pt-16">
+      <h1 className="enter text-center text-3xl font-semibold tracking-[-0.035em] sm:text-5xl">How it works</h1>
 
-      <ol className="mt-12 divide-y divide-rule border-y border-rule">
-        {LAYERS.map((l) => (
-          <li key={l.n} className="grid gap-2 py-7 sm:grid-cols-[64px_1fr]">
-            <span className="font-mono text-sm text-faint">{l.n}</span>
-            <div>
-              <h2 className="text-lg font-semibold tracking-tight">{l.title}</h2>
-              <p className="mt-2 leading-relaxed text-ink-2">{l.body}</p>
+      <div className="grid gap-3 sm:grid-cols-2">
+        {CHECKS.map((c, i) => (
+          <Card key={c.n} className={cx("enter p-4", i === 0 && "sm:col-span-2")} style={{ animationDelay: `${i * 50}ms` }}>
+            <div className="flex items-center gap-2.5">
+              <span className={cx("size-2 rounded-full", TONE_BG[c.tone])} aria-hidden="true" />
+              <h2 className="text-[15px] font-semibold">{c.title}</h2>
+              <span className="ml-auto font-mono text-xs text-faint">{c.n}</span>
             </div>
-          </li>
+            <ul className="mt-3 flex flex-wrap gap-1.5">
+              {c.tags.map((t) => (
+                <li key={t}>
+                  <Badge>{t}</Badge>
+                </li>
+              ))}
+            </ul>
+          </Card>
         ))}
-      </ol>
+      </div>
 
-      <section className="mt-14">
-        <h2 className="text-2xl font-semibold tracking-tight">The score</h2>
-        <div className="mt-5 grid gap-3 sm:grid-cols-3">
-          {[
-            ["0–39", "Looks safe", "bg-legit"],
-            ["40–69", "Suspicious", "bg-unsure"],
-            ["70–100", "Phishing", "bg-phish"],
-          ].map(([range, label, dot]) => (
-            <div key={label} className="rounded-xl border border-rule bg-card p-4">
-              <div className="flex items-center gap-2 font-medium">
-                <span className={`size-2 rounded-full ${dot}`} />
-                {label}
+      <Card className="enter overflow-hidden">
+        <CardHeader title="Score" aside={<span className="font-mono">0–100</span>} />
+        <div className="p-4">
+          <div className="flex h-2 gap-1" aria-hidden="true">
+            {SCALE.map((s) => (
+              <span key={s.label} className={cx("rounded-full", TONE_BG[s.tone])} style={{ width: s.width }} />
+            ))}
+          </div>
+          <div className="mt-3 flex gap-1">
+            {SCALE.map((s) => (
+              <div key={s.label} style={{ width: s.width }} className="min-w-0">
+                <p className="truncate text-[13px] font-medium">{s.label}</p>
+                <p className="font-mono text-xs text-muted">{s.range}</p>
               </div>
-              <p className="mt-1 font-mono text-sm text-muted">{range}</p>
-            </div>
-          ))}
+            ))}
+          </div>
         </div>
-        <p className="mt-5 leading-relaxed text-ink-2">
-          On a live sample of 150 links from OpenPhish and 150 long-tail sites from Tranco, scored with the threat lists
-          switched off so the feed could not grade itself, 74% of phishing scored 70 or more while 0.7% of real sites
-          did; 88% of phishing scored 40 or more at 2% of real sites. With the lists on, anything already reported is
-          caught outright. The script is <code className="font-mono text-sm">scripts/eval_scanner.py</code>.
-        </p>
-      </section>
+      </Card>
 
-      <section className="mt-14">
-        <h2 className="text-2xl font-semibold tracking-tight">What it can&apos;t do</h2>
-        <ul className="mt-4 list-disc space-y-2 pl-5 leading-relaxed text-ink-2">
-          <li>See pages built entirely in JavaScript. Scripts never run, which keeps the scanner safe and blind to them.</li>
-          <li>See what a kit shows only to its targets. Kits that check location or device can show scanners something else.</li>
-          <li>Promise a link is safe. A low score means no evidence was found, not that there is none.</li>
+      <Card className="enter overflow-hidden">
+        <CardHeader title="Measured live" aside={<Badge>Lists off</Badge>} />
+        <Metrics
+          items={[
+            { label: "Caught ≥70", value: "74%", tone: "ok" },
+            { label: "False alarms ≥70", value: "0.7%" },
+            { label: "Caught ≥40", value: "88%", tone: "ok" },
+            { label: "False alarms ≥40", value: "2.0%" },
+            { label: "Phishing links", value: "150" },
+            { label: "Real sites", value: "150" },
+          ]}
+        />
+      </Card>
+
+      <div className="grid gap-3 sm:grid-cols-2">
+        <Card className="enter overflow-hidden">
+          <CardHeader title="Limits" />
+          <ul className="flex flex-wrap gap-1.5 p-4">
+            {["JS-only pages", "Targeted cloaking", "Low ≠ guaranteed"].map((t) => (
+              <li key={t}>
+                <Badge tone="warn">{t}</Badge>
+              </li>
+            ))}
+          </ul>
+        </Card>
+        <Card className="enter overflow-hidden">
+          <CardHeader title="Safety" />
+          <ul className="flex flex-wrap gap-1.5 p-4">
+            {["Scripts never run", "Private IPs blocked", "Redirects re-checked", "Size & time caps"].map((t) => (
+              <li key={t}>
+                <Badge tone="ok">{t}</Badge>
+              </li>
+            ))}
+          </ul>
+        </Card>
+      </div>
+
+      <Card className="enter overflow-hidden">
+        <CardHeader title="API" aside={<a className="transition-colors hover:text-fg" href="/api/docs">Docs ↗</a>} />
+        <ul className="divide-y divide-line font-mono text-[12.5px]">
+          {[
+            ["POST", "/api/scan", "Full scan"],
+            ["POST", "/api/check", "Link text only"],
+            ["GET", "/api/report", "PDF"],
+            ["GET", "/api/health", "Sources"],
+          ].map(([method, path, label]) => (
+            <li key={path} className="flex items-center gap-3 px-4 py-2.5">
+              <Badge tone={method === "POST" ? "accent" : "neutral"} className="w-12 justify-center font-mono text-[11px]">
+                {method}
+              </Badge>
+              <span className="text-fg">{path}</span>
+              <span className="ml-auto font-sans text-xs text-muted">{label}</span>
+            </li>
+          ))}
         </ul>
-      </section>
-
-      <section className="mt-14">
-        <h2 className="text-2xl font-semibold tracking-tight">API</h2>
-        <pre className="mt-4 overflow-x-auto rounded-xl border border-rule bg-card p-4 font-mono text-[13px] leading-relaxed text-ink-2">
-{`POST /api/scan    {"url": "https://…", "deep": true}
-POST /api/check   {"url": "https://…"}        # link text only, no network
-GET  /api/report?url=https://…&download=true  # PDF
-GET  /api/health`}
-        </pre>
-        <p className="mt-3 text-sm text-muted">
-          Interactive docs at <Link className="underline underline-offset-4" href="/api/docs">/api/docs</Link>.
-        </p>
-      </section>
+      </Card>
     </div>
   );
 }

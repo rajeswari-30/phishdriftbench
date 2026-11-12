@@ -1,17 +1,22 @@
 import { Suspense } from "react";
 import { Scanner } from "@/components/scanner";
+import { Badge } from "@/components/ui";
+
+const CHECKS = ["Threat lists", "Domain age", "Page scan", "Link text", "AI review"];
 
 export default function Home() {
   return (
-    <div className="mx-auto max-w-3xl px-4 pb-24 pt-16 sm:px-6 sm:pt-24">
-      <p className="mb-5 font-mono text-[12.5px] text-muted">Phishing link scanner</p>
-      <h1 className="text-balance text-4xl font-semibold leading-[1.05] tracking-[-0.035em] sm:text-6xl">
-        Check a link before you open it.
-      </h1>
-      <p className="mb-9 mt-5 max-w-xl text-pretty text-lg leading-relaxed text-muted">
-        PhishLens checks threat lists, how old the domain is, and what the page really asks for, then explains every
-        point of its score.
-      </p>
+    <div className="mx-auto max-w-3xl px-4 pt-10 pb-24 sm:px-6 sm:pt-16">
+      <div className="enter mb-8 text-center">
+        <h1 className="text-4xl font-semibold tracking-[-0.04em] text-balance sm:text-6xl">Check any link.</h1>
+        <ul className="mt-5 flex flex-wrap justify-center gap-1.5" aria-label="What a scan checks">
+          {CHECKS.map((c) => (
+            <li key={c}>
+              <Badge>{c}</Badge>
+            </li>
+          ))}
+        </ul>
+      </div>
       <Suspense>
         <Scanner />
       </Suspense>
